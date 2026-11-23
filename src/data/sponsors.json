@@ -1,0 +1,68 @@
+[
+  {
+    "id": "blushbook",
+    "name": "Blushbook",
+    "logoPath": "/sponsors/blushbook.png",
+    "tagline": "Discover & Book Beauty",
+    "bgColor": "#ffffff",
+    "textColor": "#0f172a",
+    "accentColor": "#e11d48",
+    "weight": 4,
+    "prominent": true
+  },
+  {
+    "id": "himalayan_spring",
+    "name": "Himalayan Spring",
+    "logoPath": null,
+    "tagline": "Pure Alpine Mineral Water",
+    "bgColor": "#0369a1",
+    "textColor": "#f8fafc",
+    "accentColor": "#38bdf8",
+    "weight": 2,
+    "prominent": false
+  },
+  {
+    "id": "everest_air",
+    "name": "Everest Air",
+    "logoPath": null,
+    "tagline": "Connecting the Peaks",
+    "bgColor": "#1e3a8a",
+    "textColor": "#facc15",
+    "accentColor": "#fbbf24",
+    "weight": 2,
+    "prominent": false
+  },
+  {
+    "id": "swiftpay_nepal",
+    "name": "SwiftPay Nepal",
+    "logoPath": null,
+    "tagline": "Instant Digital Payments",
+    "bgColor": "#4c1d95",
+    "textColor": "#ffffff",
+    "accentColor": "#a855f7",
+    "weight": 2,
+    "prominent": false
+  },
+  {
+    "id": "shikhar_forge",
+    "name": "Shikhar Forge",
+    "logoPath": null,
+    "tagline": "Forged in Strength",
+    "bgColor": "#1e293b",
+    "textColor": "#f97316",
+    "accentColor": "#ea580c",
+    "weight": 2,
+    "prominent": false
+  },
+  {
+    "id": "himal_leaf",
+    "name": "Himal Leaf",
+    "logoPath": null,
+    "tagline": "Pure Valley Harvest",
+    "bgColor": "#064e3b",
+    "textColor": "#fef08a",
+    "accentColor": "#86efac",
+    "weight": 2,
+    "prominent": false
+  }
+]

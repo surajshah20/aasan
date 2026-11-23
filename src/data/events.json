@@ -1,0 +1,85 @@
+[
+  {
+    "id": "event_qfx_movie_1",
+    "venueId": "qfx_civil_audi1",
+    "title": {
+      "en": "Lalit Maya (ललित माया)",
+      "ne": "ललित माया"
+    },
+    "subtitle": {
+      "en": "Romantic Drama • 2h 24m • 4K Dolby Atmos",
+      "ne": "रोमान्टिक सामाजिक कथा • २ घण्टा २४ मिनेट • डल्बी एटमॉस"
+    },
+    "category": "movie",
+    "dateISO": "2026-11-25",
+    "time": "06:30 PM",
+    "accentColor": "#e11d48",
+    "hallName": "Audi 1 (Dolby Atmos)"
+  },
+  {
+    "id": "event_tu_cricket_1",
+    "venueId": "tu_cricket_ground",
+    "title": {
+      "en": "Nepal vs Netherlands — T20 Tri-Series Final",
+      "ne": "नेपाल विरुद्ध नेदरल्यान्ड्स — टी-२० फाइनल"
+    },
+    "subtitle": {
+      "en": "ICC Men's T20 International Series 2026",
+      "ne": "अन्तर्राष्ट्रिय टी-२० शृङ्खला २०२६"
+    },
+    "category": "cricket",
+    "dateISO": "2026-11-28",
+    "time": "01:15 PM",
+    "accentColor": "#0284c7"
+  },
+  {
+    "id": "event_tu_concert_1",
+    "venueId": "tu_cricket_ground",
+    "title": {
+      "en": "1974 AD — 30 Years Homecoming Tour",
+      "ne": "१९७४ एडी — ३० वर्षे साङ्गीतिक यात्रा"
+    },
+    "subtitle": {
+      "en": "Live Stadium Rock Concert under Kathmandu skies",
+      "ne": "कीर्तिपुर मैदानमा भव्य साङ्गीतिक साँझ"
+    },
+    "category": "concert",
+    "dateISO": "2026-12-05",
+    "time": "05:00 PM",
+    "accentColor": "#8b5cf6"
+  },
+  {
+    "id": "event_civil_movie_1",
+    "venueId": "civil_mall_cinema",
+    "title": {
+      "en": "Guras ko Katha (गुराँसको कथा)",
+      "ne": "गुराँसको कथा"
+    },
+    "subtitle": {
+      "en": "Himalayan Adventure Drama • 2h 10m",
+      "ne": "हिमाली साहसिक यात्रा • २ घण्टा १० मिनेट"
+    },
+    "category": "movie",
+    "dateISO": "2026-11-25",
+    "time": "03:45 PM",
+    "accentColor": "#f59e0b",
+    "hallName": "Screen 1"
+  },
+  {
+    "id": "event_fcube_movie_1",
+    "venueId": "fcube_cinemas",
+    "title": {
+      "en": "Shadows of Kathmandu",
+      "ne": "काठमाडौँका छायाँहरू"
+    },
+    "subtitle": {
+      "en": "Neo-noir Mystery Thriller • 2h 18m",
+      "ne": "रहस्यमयी थ्रिलर • २ घण्टा १८ मिनेट"
+    },
+    "category": "movie",
+    "dateISO": "2026-11-26",
+    "time": "07:15 PM",
+    "accentColor": "#10b981",
+    "hallName": "Cube Supreme Screen"
+  }
+]

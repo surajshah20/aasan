@@ -6,7 +6,7 @@ import eventsData from '../data/events.json';
 import { Layers, ArrowLeft, Calendar, Menu, X } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { t, language, toggleLanguage } = useT();
+  const { t, language, setLanguage } = useT();
   const { currentView, setView, isLiteMode, toggleLiteMode, selectedVenueId, selectedEventId } = useBookingStore();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -23,8 +23,8 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-50 w-full h-14 bg-[#0a0b10]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 transition-all select-none">
-      <div className="h-full flex items-center justify-between gap-3 max-w-[1200px] mx-auto">
-        {/* Brand / Logo */}
+      <div className="relative h-full flex items-center justify-between gap-3 max-w-[1200px] mx-auto">
+        {/* Brand / Logo (Left) */}
         <div className="flex items-center gap-3 shrink-0">
           {currentView !== 'landing' && (
             <button
@@ -61,9 +61,9 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Navigation links for Landing Page (Desktop) */}
+        {/* Centered Navigation Links for Landing Page (Desktop) */}
         {currentView === 'landing' && (
-          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-300">
+          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-300 absolute left-1/2 -translate-x-1/2">
             <button
               onClick={() => scrollToSection('stadium-section')}
               className="hover:text-white transition-colors cursor-pointer"
@@ -106,7 +106,7 @@ export const Header: React.FC = () => {
         )}
 
         {/* Right Controls */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Lite / 3D Mode Toggle */}
           <button
             onClick={toggleLiteMode}
@@ -126,14 +126,34 @@ export const Header: React.FC = () => {
             </span>
           </button>
 
-          {/* Language Toggle */}
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 transition-colors"
-            title="Toggle Language"
-          >
-            <span>{language === 'ne' ? 'EN' : 'नेपाली'}</span>
-          </button>
+          {/* Two-option Language Toggle: EN | नेपाली */}
+          <div className="flex items-center rounded-lg border border-white/10 bg-white/5 p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              className={`px-2 py-1 rounded text-xs transition-colors cursor-pointer ${
+                language === 'en'
+                  ? 'bg-white/20 text-white font-semibold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="English"
+            >
+              EN
+            </button>
+            <span className="text-white/20 select-none text-[11px] px-0.5">|</span>
+            <button
+              type="button"
+              onClick={() => setLanguage('ne')}
+              className={`px-2 py-1 rounded text-xs transition-colors cursor-pointer ${
+                language === 'ne'
+                  ? 'bg-white/20 text-white font-semibold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="नेपाली"
+            >
+              नेपाली
+            </button>
+          </div>
 
           {/* Mobile Menu Button on Landing */}
           {currentView === 'landing' && (

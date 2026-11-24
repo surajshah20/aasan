@@ -32,7 +32,7 @@ export const HeroStadiumBackground: React.FC = () => {
   return (
     <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
       {shouldLoad3D ? (
-        <div className="hero-stadium-canvas-wrap w-full h-full scale-[1.02]">
+        <div className="hero-stadium-canvas-wrap w-full h-full lg:translate-x-[10%] scale-[1.02]">
           <style>{`
             .hero-stadium-canvas-wrap nav[aria-label="Breadcrumb"],
             .hero-stadium-canvas-wrap button,
@@ -46,7 +46,7 @@ export const HeroStadiumBackground: React.FC = () => {
               <img
                 src="/landing/hero-poster.jpg"
                 alt="TU Cricket Ground night preview"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-[68%_center]"
                 loading="eager"
               />
             }
@@ -58,14 +58,15 @@ export const HeroStadiumBackground: React.FC = () => {
         <img
           src="/landing/hero-poster.jpg"
           alt="TU Cricket Ground night preview"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover object-[68%_center]"
           loading="eager"
         />
       )}
 
-      {/* Dark overlays to maintain high contrast and readability for left-aligned headline */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0b10] via-[#0a0b10]/80 to-[#0a0b10]/30" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0a0b10] via-transparent to-[#0a0b10]/50" />
+      {/* Left-to-right dark gradient: high contrast behind left-aligned headline, fading to transparent on the right half so the stadium pitch and stands are bright and clearly visible */}
+      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0b10] via-[#0a0b10]/85 via-42% to-transparent pointer-events-none" />
+      {/* Subtle bottom fade to transition seamlessly into the content */}
+      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#0a0b10] to-transparent pointer-events-none" />
     </div>
   );
 };

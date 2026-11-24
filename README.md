@@ -1,6 +1,22 @@
+<p align="center">
+  <img src="public/brand/logo.svg" alt="Aasan आसन Logo" width="320" />
+</p>
+
 # Aasan (आसन) — Immersive Ticketing & Seat-View Platform for Nepal
 
-> **आसन • Aasan**: "Seat" in Nepali. Nepal's premier seat-selection and digital ticketing experience featuring real eye-level perspective previews for both stadiums and cinema halls.
+> **आसन • Aasan**: "Seat" in Nepali. Nepal's premier 3D seat-selection and digital ticketing platform featuring true eye-level perspective previews for stadiums and cinema halls.
+
+---
+
+## 🎨 Brand Identity (Option A: The Perspective Seat)
+- **Symbol**: A geometric front-facing seat with a Nepal crimson backrest (`#dc143c`), white cushion base and armrests, and a dotted sightline ray leading to an elevated viewpoint dot—symbolizing "See your seat before you book."
+- **Typography**: Geometric modern wordmark outlined from *Outfit Bold* paired with clean Devanagari *आसन* from *Noto Sans Devanagari*.
+- **Color Palette**: Nepal Crimson (`#dc143c`), Off-White (`#ffffff`), and Deep Night (`#0a0b10`).
+- **Assets**:
+  - Dark Lockup: [`public/brand/logo.svg`](public/brand/logo.svg)
+  - Light Lockup: [`public/brand/logo-light.svg`](public/brand/logo-light.svg)
+  - Symbol: [`public/brand/symbol.svg`](public/brand/symbol.svg)
+  - Favicon: [`public/favicon.svg`](public/favicon.svg)
 
 ---
 

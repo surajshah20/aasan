@@ -9,10 +9,10 @@ export const Footer: React.FC = () => {
       <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Brand & summary */}
         <div className="flex flex-wrap items-center gap-2.5 justify-center sm:justify-start">
-          <div className="flex items-center gap-1.5">
-            <span className="w-5 h-5 rounded bg-[#dc143c] text-white flex items-center justify-center font-bold text-[11px]">
-              आ
-            </span>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded bg-[#0a0b10] border border-white/10 flex items-center justify-center p-0.5">
+              <img src="/brand/symbol.svg" alt="Aasan Logo" className="w-full h-full object-contain" />
+            </div>
             <span className="font-semibold text-slate-200">Aasan (आसन)</span>
           </div>
           <span className="text-white/20 hidden sm:inline">•</span>

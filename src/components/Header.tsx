@@ -45,17 +45,17 @@ export const Header: React.FC = () => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
-            className="flex items-center gap-2.5 cursor-pointer"
+            className="flex items-center gap-2.5 cursor-pointer group"
           >
-            <div className="w-7 h-7 rounded-lg bg-[#dc143c] flex items-center justify-center text-white font-bold text-sm">
-              आ
+            <div className="w-8 h-8 rounded-lg bg-[#0a0b10] border border-white/10 flex items-center justify-center p-1 group-hover:border-white/25 transition-colors shadow-sm">
+              <img src="/brand/symbol.svg" alt="Aasan Logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-display font-bold text-lg tracking-tight text-white">
+              <span className="font-display font-bold text-lg tracking-tight text-white group-hover:text-white/95 transition-colors">
                 {t('app_name')}
               </span>
               <span className="text-[11px] text-[#dc143c] font-semibold tracking-wider">
-                नेपाल
+                {language === 'ne' ? 'आसन' : 'नेपाल'}
               </span>
             </div>
           </div>

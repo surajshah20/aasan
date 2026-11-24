@@ -1,355 +1,456 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useMemo } from 'react';
 import { useT } from '../../i18n/useT';
 import { useBookingStore } from '../../store/useBookingStore';
 import venuesData from '../../data/venues.json';
 import eventsData from '../../data/events.json';
-import { formatPrice } from '../../lib/money';
 import { Venue } from '../../types';
-import { 
-  Trophy, 
-  Film, 
-  MapPin, 
-  ArrowRight, 
-  Sparkles, 
-  Eye, 
-  ChevronRight,
-  Tv
-} from 'lucide-react';
+import { HeroStadiumBackground } from './HeroStadiumBackground';
+import { Search, ArrowRight, Calendar } from 'lucide-react';
 
 export const LandingHero: React.FC = () => {
-  const { t, language } = useT();
+  const { language } = useT();
   const { selectVenue } = useBookingStore();
-  const [activeTab, setActiveTab] = useState<'all' | 'stadium' | 'cinema'>('all');
-  const [selectedChainFilter, setSelectedChainFilter] = useState<string>('all');
+
+  const [chainFilter, setChainFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const venues = venuesData as unknown as Venue[];
-  const stadiumVenue = venues.find((v) => v.type === 'stadium');
-  const cinemaVenues = venues.filter((v) => v.type === 'cinema');
+  const stadiumVenue = venues.find((v) => v.type === 'stadium') || venues[0];
+  const cinemaVenues = useMemo(() => venues.filter((v) => v.type === 'cinema'), [venues]);
 
-  // Chains available
-  const chains = Array.from(new Set(cinemaVenues.map((c) => c.chain).filter(Boolean))) as string[];
+  // Upcoming stadium events
+  const stadiumEvents = eventsData.filter((e) => e.venueId === stadiumVenue.id);
 
-  const filteredCinemas = selectedChainFilter === 'all'
-    ? cinemaVenues
-    : cinemaVenues.filter((c) => c.chain === selectedChainFilter);
+  // Chains list for filter
+  const chains = useMemo(() => {
+    return Array.from(new Set(cinemaVenues.map((c) => c.chain).filter(Boolean))) as string[];
+  }, [cinemaVenues]);
+
+  // Filtered cinemas table data
+  const filteredCinemas = useMemo(() => {
+    return cinemaVenues.filter((venue) => {
+      const matchesChain = chainFilter === 'all' || venue.chain === chainFilter;
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return matchesChain;
+      const matchesText =
+        venue.name[language]?.toLowerCase().includes(q) ||
+        venue.name.en.toLowerCase().includes(q) ||
+        venue.chain?.toLowerCase().includes(q) ||
+        venue.city?.toLowerCase().includes(q) ||
+        venue.location?.toLowerCase().includes(q);
+      return matchesChain && matchesText;
+    });
+  }, [cinemaVenues, chainFilter, searchQuery, language]);
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   return (
-    <div className="relative min-h-[calc(100vh-65px)] flex flex-col justify-between overflow-hidden">
-      {/* Ambient background glows */}
-      <div className="absolute top-[-15%] left-[10%] w-[500px] h-[500px] rounded-full bg-crimson/15 blur-[120px] pointer-events-none" />
-      <div className="absolute top-[25%] right-[5%] w-[450px] h-[450px] rounded-full bg-nepalblue/20 blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[30%] w-[600px] h-[300px] rounded-full bg-crimson/10 blur-[130px] pointer-events-none" />
+    <div className="bg-[#0a0b10] text-[#f1f5f9] select-none">
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 1. HERO (Full Viewport) */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <section className="relative w-full h-[calc(100vh-56px)] min-h-[560px] flex items-center overflow-hidden">
+        {/* Live auto-orbiting background (with pre-rendered poster fallback) */}
+        <HeroStadiumBackground />
 
-      {/* Main Container */}
-      <div className="max-w-7xl mx-auto w-full px-4 sm:px-8 pt-10 pb-16 z-10">
-        {/* Hero Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-          className="text-center max-w-3xl mx-auto mb-12 sm:mb-16"
-        >
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-pill bg-white/5 border border-white/10 text-xs text-text/80 mb-6 shadow-glow-subtle">
-            <Sparkles className="w-3.5 h-3.5 text-crimson animate-pulse" />
-            <span className="font-medium tracking-wide">
-              {language === 'ne' ? '३D सिट-भ्यू टिकेटिङ प्रणाली' : 'Next-Gen 3D Seat Preview Platform'}
-            </span>
+        {/* Content Container (Left-aligned, 1200px max width) */}
+        <div className="relative z-10 w-full max-w-[1200px] mx-auto px-4 sm:px-6 py-12">
+          <div className="max-w-[580px]">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display font-bold tracking-tight text-[#f1f5f9] leading-[1.1] mb-5">
+              {language === 'ne' ? 'बुकिङ गर्नुअघि आफ्नो सिट प्रत्यक्ष हेर्नुहोस्।' : 'See your seat before you book.'}
+            </h1>
+
+            <p className="text-base sm:text-lg text-slate-300 font-normal leading-relaxed mb-8 max-w-[520px]">
+              {language === 'ne'
+                ? 'टिकट काट्नुअघि नै रंगशालाको मैदान वा सिनेमाको पर्दा आफ्नै आँखाको कोणबाट ३D मा हेर्नुहोस्।'
+                : 'Preview the pitch or cinema screen from your exact seat in 3D before paying.'}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => scrollToSection('stadium-section')}
+                className="px-6 py-3 rounded-lg bg-[#dc143c] hover:bg-[#b01030] text-white text-sm font-semibold transition-colors cursor-pointer"
+              >
+                {language === 'ne' ? 'खेल रोज्नुहोस्' : 'Choose a match'}
+              </button>
+
+              <button
+                onClick={() => scrollToSection('cinemas-section')}
+                className="px-6 py-3 rounded-lg bg-white/[0.08] hover:bg-white/[0.14] border border-white/15 text-[#f1f5f9] text-sm font-semibold transition-colors cursor-pointer"
+              >
+                {language === 'ne' ? 'चलचित्र रोज्नुहोस्' : 'Choose a movie'}
+              </button>
+            </div>
           </div>
+        </div>
+      </section>
 
-          {/* Headline in Dual Language */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-display font-extrabold tracking-tight text-white leading-[1.15] mb-4">
-            {language === 'ne' ? (
-              <>
-                आफ्नै <span className="text-transparent bg-clip-text bg-gradient-to-r from-crimson via-red-400 to-amber-300">आँखाको कोणबाट</span> सिट छान्नुहोस्।
-              </>
-            ) : (
-              <>
-                Choose your seat with a <span className="text-transparent bg-clip-text bg-gradient-to-r from-crimson via-red-400 to-amber-300">real perspective</span>.
-              </>
-            )}
-          </h1>
-
-          <p className="text-base sm:text-lg text-muted font-normal max-w-2xl mx-auto leading-relaxed">
-            {t('hero_subtitle')}
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 2. HOW IT WORKS */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <section id="how-it-works" className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 py-24 sm:py-28">
+        <div className="mb-12">
+          <h2 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-[#f1f5f9] mb-2">
+            {language === 'ne' ? 'कसरी काम गर्छ' : 'How it works'}
+          </h2>
+          <p className="text-sm text-slate-400">
+            {language === 'ne' ? 'तीन चरणमा आफ्नो दृश्य रोज्नुहोस्।' : 'Select your exact view in three clear steps.'}
           </p>
-
-          {/* Category Tabs */}
-          <div className="flex items-center justify-center gap-2 mt-8">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`px-4 py-2 rounded-pill text-xs font-semibold transition-all ${
-                activeTab === 'all'
-                  ? 'bg-white text-bg shadow-lg shadow-white/10'
-                  : 'bg-white/5 text-muted hover:text-white hover:bg-white/10'
-              }`}
-            >
-              {language === 'ne' ? 'सबै भेन्युहरू' : 'All Venues'}
-            </button>
-            <button
-              onClick={() => setActiveTab('stadium')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-pill text-xs font-semibold transition-all ${
-                activeTab === 'stadium'
-                  ? 'bg-crimson text-white shadow-glow-crimson'
-                  : 'bg-white/5 text-muted hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <Trophy className="w-3.5 h-3.5" />
-              <span>{t('explore_matches')}</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('cinema')}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-pill text-xs font-semibold transition-all ${
-                activeTab === 'cinema'
-                  ? 'bg-nepalblue text-white shadow-glow-blue'
-                  : 'bg-white/5 text-muted hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <Film className="w-3.5 h-3.5" />
-              <span>{t('explore_cinemas')}</span>
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Two Grand Venue Entry Cards (Grid) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-14">
-          {/* Card 1: Matches & Events (TU Stadium) */}
-          {(activeTab === 'all' || activeTab === 'stadium') && stadiumVenue && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              whileHover={{ y: -4 }}
-              onClick={() => selectVenue(stadiumVenue.id, 'event_tu_cricket_1')}
-              className="group relative cursor-pointer rounded-2xl bg-gradient-to-b from-surface-elevated to-surface border border-white/10 hover:border-crimson/50 p-6 sm:p-8 overflow-hidden transition-all duration-300 shadow-xl hover:shadow-glow-crimson"
-            >
-              {/* Subtle Stadium Light Glow */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-crimson/10 rounded-full blur-3xl pointer-events-none group-hover:bg-crimson/20 transition-colors" />
-
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-pill bg-crimson/15 border border-crimson/30 text-crimson text-xs font-semibold">
-                  <Trophy className="w-3.5 h-3.5" />
-                  <span>{t('explore_matches')}</span>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-muted font-medium bg-black/40 px-3 py-1.5 rounded-pill border border-white/5">
-                  <Eye className="w-3.5 h-3.5 text-crimson" />
-                  <span>3D Pitch Fly-in</span>
-                </div>
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl font-display font-bold text-white mb-2 group-hover:text-red-200 transition-colors">
-                {stadiumVenue.name[language]}
-              </h2>
-
-              <div className="flex items-center gap-2 text-muted text-xs sm:text-sm mb-4">
-                <MapPin className="w-4 h-4 text-crimson shrink-0" />
-                <span>{stadiumVenue.location}</span>
-              </div>
-
-              <p className="text-muted/90 text-sm leading-relaxed mb-6">
-                {stadiumVenue.description[language]}
-              </p>
-
-              {/* Sample Upcoming Events */}
-              <div className="space-y-2.5 mb-6 pt-4 border-t border-white/5">
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-2 h-2 rounded-full bg-sky-400" />
-                    <div>
-                      <p className="text-xs font-semibold text-text">
-                        {language === 'ne' ? 'नेपाल विरुद्ध नेदरल्यान्ड्स (टी-२०)' : 'Nepal vs Netherlands (T20 Final)'}
-                      </p>
-                      <p className="text-[11px] text-muted">28 Nov • 01:15 PM</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-semibold text-emerald-400">
-                    {language === 'ne' ? 'रू ५०० बाट' : 'from NPR 500'}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.03] border border-white/5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-2 h-2 rounded-full bg-purple-400" />
-                    <div>
-                      <p className="text-xs font-semibold text-text">
-                        {language === 'ne' ? '१९७४ एडी — ३० वर्षे साङ्गीतिक यात्रा' : '1974 AD — 30 Yrs Live Concert'}
-                      </p>
-                      <p className="text-[11px] text-muted">05 Dec • 05:00 PM</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-semibold text-emerald-400">
-                    {language === 'ne' ? 'रू ७५० बाट' : 'from NPR 750'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-xs text-muted">
-                  5 Stands • VIP Pavilion • Upper/Lower Tiers
-                </span>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-crimson hover:bg-crimson-dark text-white text-xs font-semibold shadow-md group-hover:translate-x-1 transition-all">
-                  <span>{t('view_seats')}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Card 2: Cinemas & Halls (Signature QFX Civil Mall Featured) */}
-          {(activeTab === 'all' || activeTab === 'cinema') && (
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              whileHover={{ y: -4 }}
-              onClick={() => selectVenue('qfx_civil_audi1', 'event_qfx_movie_1')}
-              className="group relative cursor-pointer rounded-2xl bg-gradient-to-b from-surface-elevated to-surface border border-white/10 hover:border-nepalblue/60 p-6 sm:p-8 overflow-hidden transition-all duration-300 shadow-xl hover:shadow-glow-blue"
-            >
-              {/* Subtle Cinema Light Glow */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-nepalblue/15 rounded-full blur-3xl pointer-events-none group-hover:bg-nepalblue/30 transition-colors" />
-
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-pill bg-nepalblue/20 border border-nepalblue/40 text-sky-400 text-xs font-semibold">
-                  <Film className="w-3.5 h-3.5" />
-                  <span>{t('explore_cinemas')}</span>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-muted font-medium bg-black/40 px-3 py-1.5 rounded-pill border border-white/5">
-                  <Tv className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Dolby Atmos 4K</span>
-                </div>
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl font-display font-bold text-white mb-2 group-hover:text-sky-200 transition-colors">
-                {venues.find(v => v.id === 'qfx_civil_audi1')?.name[language]}
-              </h2>
-
-              <div className="flex items-center gap-2 text-muted text-xs sm:text-sm mb-4">
-                <MapPin className="w-4 h-4 text-sky-400 shrink-0" />
-                <span>Sundhara, Kathmandu</span>
-              </div>
-
-              <p className="text-muted/90 text-sm leading-relaxed mb-6">
-                {venues.find(v => v.id === 'qfx_civil_audi1')?.description[language]}
-              </p>
-
-              {/* Movie Screening Feature Preview */}
-              <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/5 mb-6">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] uppercase tracking-wider text-muted font-bold">
-                    {language === 'ne' ? 'अब प्रदर्शन हुँदै' : 'NOW SHOWING'}
-                  </span>
-                  <span className="text-xs font-semibold text-emerald-400">
-                    {formatPrice(360, language)} {t('from_price')}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-text">
-                      {language === 'ne' ? 'ललित माया (Lalit Maya)' : 'Lalit Maya (Romantic Drama)'}
-                    </p>
-                    <p className="text-xs text-muted">Today • 06:30 PM • Audi 1</p>
-                  </div>
-                  <div className="text-[11px] px-2.5 py-1 rounded bg-white/5 border border-white/10 text-text/90 font-medium">
-                    Recliner • Club
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-xs text-muted">
-                  Royal Recliners • Prime Club • Classic
-                </span>
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-nepalblue hover:bg-blue-800 text-white text-xs font-semibold shadow-md group-hover:translate-x-1 transition-all">
-                  <span>{t('view_seats')}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </div>
-            </motion.div>
-          )}
         </div>
 
-        {/* All Cinema Halls Directory (Grouped by Chain) */}
-        <div className="mt-8 pt-10 border-t border-white/10">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Step 1 */}
+          <div className="rounded-xl border border-white/10 bg-[#12141c]/50 p-4 flex flex-col justify-between">
+            <div className="aspect-[16/10] w-full rounded-lg overflow-hidden bg-black/40 mb-4 border border-white/5">
+              <img
+                src="/landing/step-1-stand.jpg"
+                alt="Pick a stand"
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
             <div>
-              <h3 className="text-xl sm:text-2xl font-display font-bold text-white">
-                {t('cinemas_title')}
-              </h3>
-              <p className="text-xs sm:text-sm text-muted">
-                {language === 'ne' 
-                  ? 'आफ्नो मनपर्ने हल र स्क्रिन छान्नुहोस्' 
-                  : 'Select your preferred cinema chain, screen and showtime'}
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-xs font-mono font-bold text-[#dc143c]">01</span>
+                <h3 className="text-base font-semibold text-[#f1f5f9]">
+                  {language === 'ne' ? 'स्ट्यान्ड रोज्नुहोस्' : 'Pick a stand'}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {language === 'ne'
+                  ? 'मैदानको चारैतिर रहेका स्ट्यान्ड, उचाइ र मूल्यको तुलना गर्नुहोस्।'
+                  : 'North Canopy, East, or Pavilion Stand with elevation and tier details.'}
               </p>
             </div>
+          </div>
 
-            {/* Plain text chain filters */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Step 2 */}
+          <div className="rounded-xl border border-white/10 bg-[#12141c]/50 p-4 flex flex-col justify-between">
+            <div className="aspect-[16/10] w-full rounded-lg overflow-hidden bg-black/40 mb-4 border border-white/5">
+              <img
+                src="/landing/step-2-block.jpg"
+                alt="Choose your block"
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-xs font-mono font-bold text-[#dc143c]">02</span>
+                <h3 className="text-base font-semibold text-[#f1f5f9]">
+                  {language === 'ne' ? 'ब्लक छान्नुहोस्' : 'Choose your block'}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {language === 'ne'
+                  ? 'कुन ब्लकबाट पिच कस्तो देखिन्छ र कति सिट उपलब्ध छन् हेर्नुहोस्।'
+                  : 'Drill down into individual blocks (E1–E15) to inspect row availability.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="rounded-xl border border-white/10 bg-[#12141c]/50 p-4 flex flex-col justify-between">
+            <div className="aspect-[16/10] w-full rounded-lg overflow-hidden bg-black/40 mb-4 border border-white/5">
+              <img
+                src="/landing/step-3-seat.jpg"
+                alt="Sit in your seat"
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-xs font-mono font-bold text-[#dc143c]">03</span>
+                <h3 className="text-base font-semibold text-[#f1f5f9]">
+                  {language === 'ne' ? 'सिटमा बस्नुहोस्' : 'Sit in your seat'}
+                </h3>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Row K, Seat 6, NPR 650
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 3. TWO VENUE ENTRIES (Stadium & Cinemas) */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <section className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Entry 1: Stadium */}
+          <div
+            id="stadium-section"
+            className="relative rounded-xl border border-white/10 overflow-hidden bg-[#12141c] flex flex-col justify-between p-6 sm:p-8 min-h-[460px]"
+          >
+            {/* Background 3D screenshot with dark overlay */}
+            <div className="absolute inset-0 pointer-events-none">
+              <img
+                src="/landing/stadium-card-bg.jpg"
+                alt="TU Cricket Ground"
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-[#0a0b10]/85" />
+            </div>
+
+            {/* Header info */}
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#dc143c]">
+                  {language === 'ne' ? 'क्रिकेट मैदान' : 'Cricket Stadium'}
+                </span>
+                <span className="text-white/20">•</span>
+                <span className="text-xs text-slate-400">Kirtipur, Kathmandu</span>
+              </div>
+
+              <h3 className="text-2xl sm:text-3xl font-display font-bold text-[#f1f5f9] mb-6">
+                {stadiumVenue.name[language]}
+              </h3>
+
+              {/* Upcoming events rows */}
+              <div className="space-y-3 mb-6">
+                {stadiumEvents.map((evt) => (
+                  <div
+                    key={evt.id}
+                    onClick={() => selectVenue(stadiumVenue.id, evt.id)}
+                    className="p-3.5 rounded-lg border border-white/10 bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-[#f1f5f9]">
+                        {evt.title[language]}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{evt.dateISO} • {evt.time}</span>
+                      </div>
+                    </div>
+                    <div className="text-left sm:text-right shrink-0">
+                      <span className="text-xs text-slate-400">from </span>
+                      <span className="text-xs font-semibold text-amber-400">NPR 450</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="relative z-10 pt-4 border-t border-white/10">
               <button
-                onClick={() => setSelectedChainFilter('all')}
-                className={`px-3 py-1.5 rounded-pill text-xs font-medium transition-all ${
-                  selectedChainFilter === 'all'
-                    ? 'bg-white/20 text-white border border-white/30'
-                    : 'bg-white/5 text-muted hover:text-white'
+                onClick={() => selectVenue(stadiumVenue.id, stadiumEvents[0]?.id)}
+                className="w-full sm:w-auto px-6 py-3 rounded-lg bg-[#dc143c] hover:bg-[#b01030] text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>{language === 'ne' ? 'रंगशाला सिट हेर्नुहोस्' : 'Explore TU Stadium'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Entry 2: Cinemas */}
+          <div
+            id="cinemas-section"
+            className="relative rounded-xl border border-white/10 overflow-hidden bg-[#12141c] flex flex-col justify-between p-6 sm:p-8 min-h-[460px]"
+          >
+            {/* Background 3D screenshot with dark overlay */}
+            <div className="absolute inset-0 pointer-events-none">
+              <img
+                src="/landing/cinema-card-bg.jpg"
+                alt="Cinema 3D Auditorium"
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-[#0a0b10]/85" />
+            </div>
+
+            {/* Header info */}
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#dc143c]">
+                  {language === 'ne' ? 'अहिले प्रदर्शनमा' : 'Now Showing'}
+                </span>
+                <span className="text-white/20">•</span>
+                <span className="text-xs text-slate-400">Kathmandu, Lalitpur & Banepa</span>
+              </div>
+
+              <h3 className="text-2xl sm:text-3xl font-display font-bold text-[#f1f5f9] mb-6">
+                {language === 'ne' ? 'सिनेमा हलहरू' : 'Premier Cinema Chains'}
+              </h3>
+
+              {/* Now showing card with abstract geometric poster tile (NO real posters/stock photos) */}
+              <div className="p-4 rounded-lg border border-white/10 bg-white/[0.04] flex items-center gap-4 mb-6">
+                {/* Abstract geometric poster tile */}
+                <div className="w-20 h-28 rounded-lg bg-gradient-to-b from-[#181a24] to-[#0a0b10] border border-white/15 p-2 flex flex-col justify-between shrink-0 select-none">
+                  <div className="w-full h-1 bg-[#dc143c] rounded" />
+                  <div className="text-center">
+                    <div className="w-6 h-6 mx-auto rounded-full border border-white/20 flex items-center justify-center text-[10px] text-slate-300 mb-1">
+                      4K
+                    </div>
+                    <span className="text-[9px] font-bold text-slate-300 tracking-tighter block uppercase">
+                      LALIT
+                    </span>
+                    <span className="text-[8px] text-[#dc143c] font-medium block">
+                      MAYA
+                    </span>
+                  </div>
+                  <div className="text-[7px] text-slate-500 text-center tracking-widest uppercase">
+                    ATMOS
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-base font-bold text-[#f1f5f9] truncate">
+                    Lalit Maya (ललित माया)
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Romantic Drama • 2h 24m • 4K Dolby Atmos
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    QFX Civil Mall (Audi 1) • Today 06:30 PM
+                  </p>
+                  <div className="mt-2 flex items-center gap-1.5 text-xs">
+                    <span className="text-slate-400">from</span>
+                    <span className="font-semibold text-amber-400">NPR 360</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="relative z-10 pt-4 border-t border-white/10">
+              <button
+                onClick={() => scrollToSection('cinemas-table')}
+                className="w-full sm:w-auto px-6 py-3 rounded-lg bg-[#dc143c] hover:bg-[#b01030] text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>{language === 'ne' ? 'सिनेमा हलहरू हेर्नुहोस्' : 'Browse cinemas'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* 4. CINEMAS COMPACT LIST / TABLE */}
+      {/* ────────────────────────────────────────────────────────── */}
+      <section id="cinemas-table" className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 py-24 sm:py-28">
+        <div className="mb-8">
+          <h2 className="text-2xl sm:text-3xl font-display font-bold tracking-tight text-[#f1f5f9] mb-2">
+            {language === 'ne' ? 'सिनेमा हल तालिका' : 'Cinemas & Screens'}
+          </h2>
+          <p className="text-sm text-slate-400">
+            {language === 'ne'
+              ? 'आफ्नो नजिकको हल र पर्दा छानेर ३D सिट पूर्वावलोकन गर्नुहोस्।'
+              : 'Compare screens, halls, and pricing across Kathmandu Valley.'}
+          </p>
+        </div>
+
+        {/* Filter & Search Bar */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6">
+          {/* Chain filter pills */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+            <button
+              onClick={() => setChainFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                chainFilter === 'all'
+                  ? 'bg-white text-black'
+                  : 'bg-white/5 hover:bg-white/10 text-slate-300'
+              }`}
+            >
+              {language === 'ne' ? 'सबै चेनहरू' : 'All Chains'}
+            </button>
+            {chains.map((chain) => (
+              <button
+                key={chain}
+                onClick={() => setChainFilter(chain)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                  chainFilter === chain
+                    ? 'bg-white text-black'
+                    : 'bg-white/5 hover:bg-white/10 text-slate-300'
                 }`}
               >
-                All Chains
+                {chain}
               </button>
-              {chains.map((chain) => (
-                <button
-                  key={chain}
-                  onClick={() => setSelectedChainFilter(chain)}
-                  className={`px-3 py-1.5 rounded-pill text-xs font-medium transition-all ${
-                    selectedChainFilter === chain
-                      ? 'bg-white/20 text-white border border-white/30'
-                      : 'bg-white/5 text-muted hover:text-white'
-                  }`}
-                >
-                  {chain}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
 
-          {/* Grid of Cinema Halls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {filteredCinemas.map((cinema) => {
-              const matchedEvent = eventsData.find((e) => e.venueId === cinema.id) || eventsData[0];
-              const minPrice = Math.min(...cinema.sections.map((s) => s.priceNPR));
-
-              return (
-                <div
-                  key={cinema.id}
-                  onClick={() => selectVenue(cinema.id, matchedEvent.id)}
-                  className="p-4 rounded-xl bg-surface-elevated/70 hover:bg-surface-elevated border border-white/5 hover:border-white/20 cursor-pointer transition-all hover:-translate-y-1 group"
-                >
-                  <div className="flex items-center justify-between text-xs text-muted mb-2">
-                    <span className="font-semibold text-sky-400">{cinema.chain}</span>
-                    <span>{cinema.city}</span>
-                  </div>
-                  <h4 className="font-bold text-sm text-white mb-1 group-hover:text-crimson transition-colors line-clamp-1">
-                    {cinema.name[language]}
-                  </h4>
-                  <p className="text-xs text-muted mb-3 line-clamp-1">
-                    {matchedEvent.title[language]}
-                  </p>
-                  <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
-                    <span className="text-text/80 font-medium">
-                      {formatPrice(minPrice, language)}
-                    </span>
-                    <span className="text-muted flex items-center gap-1 group-hover:text-white">
-                      <span>{t('view_seats')}</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Search Field */}
+          <div className="relative min-w-[240px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={language === 'ne' ? 'हल वा स्थान खोज्नुहोस्...' : 'Search hall or area...'}
+              className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-white/30"
+            />
           </div>
         </div>
-      </div>
+
+        {/* Compact Table */}
+        <div className="rounded-xl border border-white/10 overflow-hidden bg-[#12141c]/40">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-white/10 bg-white/[0.02] text-slate-400 uppercase tracking-wider text-[11px]">
+                  <th className="py-3 px-4 font-semibold">Chain</th>
+                  <th className="py-3 px-4 font-semibold">Hall / Screen</th>
+                  <th className="py-3 px-4 font-semibold">Area / City</th>
+                  <th className="py-3 px-4 font-semibold text-right">from NPR</th>
+                  <th className="py-3 px-4 font-semibold text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredCinemas.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-slate-500 text-xs">
+                      {language === 'ne' ? 'कुनै हल भेटिएन।' : 'No cinemas match your search.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCinemas.map((cinema) => {
+                    const minPrice = Math.min(...cinema.sections.map((s) => s.priceNPR));
+                    const matchedEvent = eventsData.find((e) => e.venueId === cinema.id) || eventsData[0];
+
+                    return (
+                      <tr
+                        key={cinema.id}
+                        className="hover:bg-white/[0.03] transition-colors"
+                      >
+                        <td className="py-3.5 px-4 font-medium text-[#f1f5f9] whitespace-nowrap">
+                          {cinema.chain || 'Independent'}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-300">
+                          {cinema.name[language]}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-400 whitespace-nowrap">
+                          {cinema.location}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-semibold text-amber-400 whitespace-nowrap">
+                          NPR {minPrice}
+                        </td>
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => selectVenue(cinema.id, matchedEvent.id)}
+                            className="text-xs text-[#dc143c] hover:text-[#ff4d6d] font-semibold transition-colors cursor-pointer"
+                          >
+                            {language === 'ne' ? 'सिट हेर्नुहोस् →' : 'View seats →'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

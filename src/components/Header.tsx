@@ -3,25 +3,33 @@ import { useT } from '../i18n/useT';
 import { useBookingStore } from '../store/useBookingStore';
 import venuesData from '../data/venues.json';
 import eventsData from '../data/events.json';
-import { Layers, Globe, ArrowLeft, Ticket, Calendar, X, Info } from 'lucide-react';
+import { Layers, ArrowLeft, Calendar, Menu, X } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const { t, language, toggleLanguage } = useT();
-  const { currentView, setView, isLiteMode, toggleLiteMode, selectedSeats, selectedVenueId, selectedEventId } = useBookingStore();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { currentView, setView, isLiteMode, toggleLiteMode, selectedVenueId, selectedEventId } = useBookingStore();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const currentVenue = venuesData.find((v) => v.id === selectedVenueId) || venuesData[0];
   const currentEvent = eventsData.find((e) => e.id === selectedEventId) || eventsData[0];
 
+  const scrollToSection = (id: string) => {
+    setMobileNavOpen(false);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full h-14 bg-[#060810]/90 backdrop-blur-2xl border-b border-white/10 px-3 sm:px-6 transition-all select-none">
-      <div className="h-full flex items-center justify-between gap-2 max-w-7xl mx-auto">
+    <header className="sticky top-0 z-50 w-full h-14 bg-[#0a0b10]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 transition-all select-none">
+      <div className="h-full flex items-center justify-between gap-3 max-w-[1200px] mx-auto">
         {/* Brand / Logo */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-3 shrink-0">
           {currentView !== 'landing' && (
             <button
               onClick={() => setView('landing')}
-              className="p-1.5 -ml-1 sm:ml-0 rounded-full hover:bg-white/10 text-muted hover:text-white transition-colors"
+              className="p-1.5 -ml-1 sm:ml-0 rounded-lg hover:bg-white/10 text-muted hover:text-white transition-colors"
               title={t('back_to_home')}
               aria-label={t('back_to_home')}
             >
@@ -30,66 +38,90 @@ export const Header: React.FC = () => {
           )}
 
           <div 
-            onClick={() => setView('landing')}
-            className="flex items-center gap-2 cursor-pointer group"
+            onClick={() => {
+              if (currentView !== 'landing') {
+                setView('landing');
+              } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+            className="flex items-center gap-2.5 cursor-pointer"
           >
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-crimson to-nepalblue flex items-center justify-center shadow-glow-crimson group-hover:scale-105 transition-transform">
-              <span className="font-display font-extrabold text-white text-sm sm:text-base">आ</span>
+            <div className="w-7 h-7 rounded-lg bg-[#dc143c] flex items-center justify-center text-white font-bold text-sm">
+              आ
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-display font-bold text-lg sm:text-xl tracking-tight text-white">
+              <span className="font-display font-bold text-lg tracking-tight text-white">
                 {t('app_name')}
               </span>
-              <span className="text-[10px] sm:text-xs text-crimson font-semibold tracking-wider uppercase">
+              <span className="text-[11px] text-[#dc143c] font-semibold tracking-wider">
                 नेपाल
               </span>
             </div>
           </div>
-
-          {currentView === 'landing' && (
-            <p className="text-[11px] text-muted tracking-tight hidden lg:block border-l border-white/10 pl-3 ml-1">
-              {t('app_tagline')}
-            </p>
-          )}
         </div>
 
-        {/* Compact Event Line in the Middle (on venue screens, hidden on small mobile) */}
+        {/* Navigation links for Landing Page (Desktop) */}
+        {currentView === 'landing' && (
+          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-300">
+            <button
+              onClick={() => scrollToSection('stadium-section')}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              {language === 'ne' ? 'खेलहरू' : 'Matches'}
+            </button>
+            <button
+              onClick={() => scrollToSection('cinemas-section')}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              {language === 'ne' ? 'सिनेमा हलहरू' : 'Cinemas'}
+            </button>
+            <button
+              onClick={() => scrollToSection('how-it-works')}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              {language === 'ne' ? 'कसरी काम गर्छ' : 'How it works'}
+            </button>
+          </nav>
+        )}
+
+        {/* Compact Event Line (Only in Venue Screen) */}
         {currentView === 'venue' && (
-          <div className="hidden md:flex items-center gap-2 text-xs truncate max-w-md lg:max-w-xl px-3 py-1 rounded-full bg-white/[0.04] border border-white/10 shadow-inner">
-            <span className="font-bold text-white truncate">
+          <div className="hidden md:flex items-center gap-2 text-xs truncate max-w-md lg:max-w-xl px-3 py-1 rounded-lg bg-white/[0.04] border border-white/10">
+            <span className="font-semibold text-white truncate">
               {currentEvent.title[language]}
             </span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-crimson/20 border border-crimson/40 text-crimson font-medium shrink-0">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#dc143c]/20 border border-[#dc143c]/40 text-[#dc143c] font-medium shrink-0">
               {currentVenue.type === 'cinema' ? 'Cinema' : 'Stadium'}
             </span>
             <span className="text-white/20">•</span>
             <span className="text-muted truncate">{currentVenue.name[language]}</span>
             <span className="text-white/20">•</span>
             <span className="text-muted shrink-0 flex items-center gap-1 text-[11px]">
-              <Calendar className="w-3 h-3 text-crimson/80" />
+              <Calendar className="w-3 h-3 text-[#dc143c]" />
               {currentEvent.dateISO}
             </span>
             <span className="text-muted shrink-0 text-[11px]">{currentEvent.time}</span>
           </div>
         )}
 
-        {/* Right Actions */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        {/* Right Controls */}
+        <div className="flex items-center gap-2 shrink-0">
           {/* Lite / 3D Mode Toggle */}
           <button
             onClick={toggleLiteMode}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-pill text-xs font-medium border transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
               isLiteMode
-                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
                 : 'bg-white/5 border-white/10 text-muted hover:text-white hover:bg-white/10'
             }`}
-            title="Toggle WebGL 3D / 2D Lite Mode"
+            title="Toggle 3D / 2D Lite Mode"
           >
             <Layers className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">
-              {isLiteMode ? t('lite_mode_active') : t('standard_mode')}
+              {isLiteMode ? t('lite_mode_active') : '3D Mode'}
             </span>
-            <span className="sm:hidden font-semibold">
+            <span className="sm:hidden font-medium">
               {isLiteMode ? '2D' : '3D'}
             </span>
           </button>
@@ -97,62 +129,46 @@ export const Header: React.FC = () => {
           {/* Language Toggle */}
           <button
             onClick={toggleLanguage}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-pill text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 text-text transition-all hover:border-white/20 active:scale-95"
-            aria-label="Toggle language between English and Nepali"
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 transition-colors"
+            title="Toggle Language"
           >
-            <Globe className="w-3.5 h-3.5 text-crimson" />
-            <span className={language === 'ne' ? 'font-bold text-crimson' : 'text-muted'}>
-              नेपाली
-            </span>
-            <span className="text-white/20">/</span>
-            <span className={language === 'en' ? 'font-bold text-white' : 'text-muted'}>
-              EN
-            </span>
+            <span>{language === 'ne' ? 'EN' : 'नेपाली'}</span>
           </button>
 
-          {/* Cart Indicator if in venue view and has selected seats */}
-          {selectedSeats.length > 0 && currentView === 'venue' && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-pill bg-crimson/20 border border-crimson/40 text-crimson text-xs font-semibold animate-pulse">
-              <Ticket className="w-3.5 h-3.5" />
-              <span>{selectedSeats.length}</span>
-            </div>
-          )}
-
-          {/* Mobile Info / Menu Toggle (on venue screen) */}
-          {currentView === 'venue' && (
+          {/* Mobile Menu Button on Landing */}
+          {currentView === 'landing' && (
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-muted hover:text-white transition-colors"
-              title="Event Details"
-              aria-label="Toggle Event Details"
+              onClick={() => setMobileNavOpen(!mobileNavOpen)}
+              className="md:hidden p-1.5 rounded-lg hover:bg-white/10 text-muted hover:text-white transition-colors"
+              aria-label="Toggle navigation menu"
             >
-              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Info className="w-4 h-4 text-crimson" />}
+              {mobileNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           )}
         </div>
       </div>
 
-      {/* Mobile Drawer Dropdown for Event info */}
-      {mobileMenuOpen && currentView === 'venue' && (
-        <div className="md:hidden absolute top-14 left-0 right-0 bg-[#060810]/95 backdrop-blur-2xl border-b border-white/15 px-4 py-3 shadow-2xl animate-fadeIn z-50">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-white">{currentEvent.title[language]}</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-crimson/20 border border-crimson/40 text-crimson font-medium">
-                {currentVenue.type === 'cinema' ? 'Cinema' : 'Stadium'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted">
-              <span>{currentVenue.name[language]}</span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-crimson" />
-                {currentEvent.dateISO}
-              </span>
-              <span>•</span>
-              <span>{currentEvent.time}</span>
-            </div>
-          </div>
+      {/* Mobile Navigation Drawer */}
+      {currentView === 'landing' && mobileNavOpen && (
+        <div className="md:hidden fixed top-14 left-0 right-0 bg-[#0a0b10] border-b border-white/10 px-4 py-4 space-y-3 z-50">
+          <button
+            onClick={() => scrollToSection('stadium-section')}
+            className="block w-full text-left py-2 text-sm text-slate-200 hover:text-white transition-colors"
+          >
+            {language === 'ne' ? 'खेलहरू' : 'Matches'}
+          </button>
+          <button
+            onClick={() => scrollToSection('cinemas-section')}
+            className="block w-full text-left py-2 text-sm text-slate-200 hover:text-white transition-colors"
+          >
+            {language === 'ne' ? 'सिनेमा हलहरू' : 'Cinemas'}
+          </button>
+          <button
+            onClick={() => scrollToSection('how-it-works')}
+            className="block w-full text-left py-2 text-sm text-slate-200 hover:text-white transition-colors"
+          >
+            {language === 'ne' ? 'कसरी काम गर्छ' : 'How it works'}
+          </button>
         </div>
       )}
     </header>

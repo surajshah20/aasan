@@ -1,23 +1,40 @@
 import React from 'react';
 import { useT } from '../i18n/useT';
-import { ShieldCheck } from 'lucide-react';
 
 export const Footer: React.FC = () => {
-  const { t } = useT();
+  const { language, toggleLanguage } = useT();
 
   return (
-    <footer className="w-full border-t border-white/5 bg-[#07080c] py-8 px-4 sm:px-8 text-center text-xs text-muted transition-colors">
-      <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-crimson animate-pulse" />
-          <span className="font-semibold text-text">Aasan (आसन)</span>
-          <span className="text-white/30">•</span>
-          <span>{t('app_tagline')}</span>
+    <footer className="w-full border-t border-white/10 bg-[#0a0b10] py-8 px-4 sm:px-6 text-xs text-slate-400">
+      <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* Brand & summary */}
+        <div className="flex flex-wrap items-center gap-2.5 justify-center sm:justify-start">
+          <div className="flex items-center gap-1.5">
+            <span className="w-5 h-5 rounded bg-[#dc143c] text-white flex items-center justify-center font-bold text-[11px]">
+              आ
+            </span>
+            <span className="font-semibold text-slate-200">Aasan (आसन)</span>
+          </div>
+          <span className="text-white/20 hidden sm:inline">•</span>
+          <span className="text-slate-400">
+            {language === 'ne'
+              ? 'नेपालका लागि ३D सिट पूर्वावलोकन तथा टिकट प्रणाली'
+              : 'Interactive 3D seat preview and ticketing platform for Nepal.'}
+          </span>
         </div>
 
-        <div className="flex items-center gap-2 text-muted/80 bg-white/[0.03] px-3.5 py-1.5 rounded-pill border border-white/5">
-          <ShieldCheck className="w-3.5 h-3.5 text-crimson" />
-          <span>{t('demo_notice')}</span>
+        {/* Right side: language & disclaimer */}
+        <div className="flex flex-wrap items-center gap-4 justify-center sm:justify-end text-slate-500">
+          <button
+            onClick={toggleLanguage}
+            className="hover:text-slate-300 transition-colors"
+          >
+            {language === 'ne' ? 'English' : 'नेपाली'}
+          </button>
+          <span className="text-white/10">•</span>
+          <p className="text-[11px] text-slate-500 text-center sm:text-right">
+            Demo concept. Not affiliated with any venue or cinema.
+          </p>
         </div>
       </div>
     </footer>

@@ -1,8 +1,12 @@
 import React, { useRef, useMemo, useState, useEffect, useLayoutEffect } from 'react';
-import { Canvas, useFrame, ThreeEvent } from '@react-three/fiber';
+import { Canvas, useFrame, useThree, ThreeEvent } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { Section, StadiumDrillLevel } from '../../types';
 import { useBookingStore } from '../../store/useBookingStore';
 import { SeatViewHeadControls } from './SeatViewHeadControls';
@@ -104,16 +108,13 @@ const ProceduralSkyAndTerrain: React.FC<{ isEvening: boolean }> = ({ isEvening }
     if (ctx) {
       const grad = ctx.createLinearGradient(0, 0, 0, 1024);
       if (isEvening) {
-        // Deep night gradient with soft warm horizon glow behind the hills and gentle gradient to deep blue above
-        grad.addColorStop(0.00, '#020617'); // Zenith deep night
-        grad.addColorStop(0.20, '#050c1e'); // Twilight dark blue
-        grad.addColorStop(0.36, '#0b1938'); // Deep midnight blue
-        grad.addColorStop(0.44, '#17274e'); // Royal evening blue haze
-        grad.addColorStop(0.48, '#322338'); // Dusky violet horizon transition
-        grad.addColorStop(0.505, '#b45309'); // Soft warm amber glow at the horizon behind hills
-        grad.addColorStop(0.525, '#78350f'); // Warm horizon radiance
-        grad.addColorStop(0.55, '#0c1220'); // Dark terrain silhouette base
-        grad.addColorStop(1.00, '#020617'); // Lower hemisphere
+        // Deep near-black sky with a very subtle dark-blue gradient at the horizon (no bright blue bands)
+        grad.addColorStop(0.00, '#010206'); // Pitch-black zenith
+        grad.addColorStop(0.35, '#02040a'); // Inky night sky
+        grad.addColorStop(0.46, '#040712'); // Deep midnight tint
+        grad.addColorStop(0.505, '#070c1a'); // Very subtle dark-blue horizon gradient
+        grad.addColorStop(0.53, '#04060c'); // Seamless transition into dark terrain
+        grad.addColorStop(1.00, '#010103'); // Lower hemisphere dark
       } else {
         // Natural sunny daylight sky gradient
         grad.addColorStop(0.00, '#1d4ed8');
@@ -172,8 +173,8 @@ const ProceduralSkyAndTerrain: React.FC<{ isEvening: boolean }> = ({ isEvening }
     const positions: number[] = [];
     const colors: number[] = [];
 
-    const baseCol = isEvening ? [0.03, 0.05, 0.10] : [0.22, 0.32, 0.38];
-    const peakCol = isEvening ? [0.06, 0.10, 0.18] : [0.35, 0.45, 0.52];
+    const baseCol = isEvening ? [0.012, 0.015, 0.022] : [0.22, 0.32, 0.38];
+    const peakCol = isEvening ? [0.018, 0.024, 0.035] : [0.35, 0.45, 0.52];
 
     for (let i = 0; i < N; i++) {
       const t0 = (i / N) * Math.PI * 2;
@@ -286,10 +287,10 @@ const ProceduralCricketField: React.FC<{ isEvening: boolean }> = ({ isEvening })
         size / 2, size / 2, size / 2
       );
       if (isEvening) {
-        grad.addColorStop(0.0, '#0c1322');
-        grad.addColorStop(0.40, '#080d18');
-        grad.addColorStop(0.70, '#050810');
-        grad.addColorStop(1.0, '#020408');
+        grad.addColorStop(0.0, '#04060b');
+        grad.addColorStop(0.40, '#030408');
+        grad.addColorStop(0.70, '#020205');
+        grad.addColorStop(1.0, '#010103');
       } else {
         grad.addColorStop(0.0, '#475569');
         grad.addColorStop(0.50, '#334155');
@@ -308,24 +309,22 @@ const ProceduralCricketField: React.FC<{ isEvening: boolean }> = ({ isEvening })
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      // Saturated warm night grass base under floodlights
-      ctx.fillStyle = isEvening ? '#226e38' : '#22783c';
+      // Saturated warm night grass base under floodlights (matching real TU ground photo)
+      ctx.fillStyle = isEvening ? '#328b40' : '#22783c';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const stripeH = 32;
       for (let y = 0; y < canvas.height; y += stripeH * 2) {
-        ctx.fillStyle = isEvening ? '#2d8747' : '#2aa04e';
+        ctx.fillStyle = isEvening ? '#3ea34e' : '#2aa04e';
         ctx.fillRect(0, y, canvas.width, stripeH);
       }
 
       if (isEvening) {
-        // Bright radiant floodlight pool over the pitch & 30-yard circle with natural warm spill
-        const pool = ctx.createRadialGradient(512, 512, 40, 512, 512, 510);
-        pool.addColorStop(0.00, 'rgba(255, 252, 230, 0.44)'); // Warm floodlight core
-        pool.addColorStop(0.20, 'rgba(254, 249, 195, 0.32)');
-        pool.addColorStop(0.48, 'rgba(74, 222, 128, 0.20)');  // Saturated lush highlight
-        pool.addColorStop(0.80, 'rgba(34, 197, 94, 0.08)');
-        pool.addColorStop(1.00, 'rgba(10, 45, 22, 0.16)');    // Soft natural falloff to boundary
+        // Even pitch lighting with gentle natural falloff ONLY near the boundary (NO central hotspot)
+        const pool = ctx.createRadialGradient(512, 512, 400, 512, 512, 512);
+        pool.addColorStop(0.00, 'rgba(0, 0, 0, 0.0)');
+        pool.addColorStop(0.85, 'rgba(0, 0, 0, 0.0)');
+        pool.addColorStop(1.00, 'rgba(10, 35, 18, 0.32)'); // Soft natural falloff to boundary
         ctx.fillStyle = pool;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       } else {
@@ -1035,98 +1034,71 @@ const ProceduralStadiumDetails: React.FC<{
     return tex;
   }, []);
 
-  // Strong additive glow sprite / halo texture
-  const haloTexture = useMemo(() => {
+  // Optical diffraction star flare with intense core and fine cross rays
+  const starFlareTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 256;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      const grad = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+      const cx = 128;
+      const cy = 128;
+
+      // Soft circular core glow
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 54);
       grad.addColorStop(0.00, 'rgba(255, 255, 255, 1.0)');
-      grad.addColorStop(0.20, 'rgba(255, 252, 230, 0.88)');
-      grad.addColorStop(0.48, 'rgba(254, 240, 138, 0.38)');
-      grad.addColorStop(0.78, 'rgba(254, 240, 138, 0.09)');
+      grad.addColorStop(0.18, 'rgba(255, 253, 235, 0.85)');
+      grad.addColorStop(0.50, 'rgba(254, 240, 138, 0.30)');
+      grad.addColorStop(0.85, 'rgba(254, 240, 138, 0.05)');
       grad.addColorStop(1.00, 'rgba(255, 240, 138, 0.0)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 256, 256);
+
+      // 4-point primary optical diffraction spikes
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.70)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(cx - 105, cy); ctx.lineTo(cx + 105, cy);
+      ctx.moveTo(cx, cy - 105); ctx.lineTo(cx, cy + 105);
+      ctx.stroke();
+
+      // Subtle diagonal secondary spikes
+      ctx.strokeStyle = 'rgba(255, 252, 220, 0.28)';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(cx - 48, cy - 48); ctx.lineTo(cx + 48, cy + 48);
+      ctx.moveTo(cx - 48, cy + 48); ctx.lineTo(cx + 48, cy - 48);
+      ctx.stroke();
     }
     return new THREE.CanvasTexture(canvas);
   }, []);
 
-  // Subtle anamorphic horizontal lens flare streak texture
-  const streakTexture = useMemo(() => {
+  // Faint localized lamp head haze (3 to 5% opacity, fading out within a few meters)
+  const headHazeTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 64;
+    canvas.width = 128;
+    canvas.height = 128;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      const grad = ctx.createLinearGradient(0, 0, 512, 0);
-      grad.addColorStop(0.00, 'rgba(255, 250, 220, 0.0)');
-      grad.addColorStop(0.40, 'rgba(255, 252, 235, 0.25)');
-      grad.addColorStop(0.50, 'rgba(255, 255, 255, 0.95)');
-      grad.addColorStop(0.60, 'rgba(255, 252, 235, 0.25)');
-      grad.addColorStop(1.00, 'rgba(255, 250, 220, 0.0)');
+      const grad = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      grad.addColorStop(0.00, 'rgba(255, 252, 235, 0.045)');
+      grad.addColorStop(0.40, 'rgba(254, 240, 180, 0.025)');
+      grad.addColorStop(0.80, 'rgba(254, 240, 180, 0.006)');
+      grad.addColorStop(1.00, 'rgba(255, 240, 180, 0.0)');
       ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 512, 64);
+      ctx.fillRect(0, 0, 128, 128);
     }
     return new THREE.CanvasTexture(canvas);
-  }, []);
-
-  // Soft volumetric light beam texture with radial Gaussian falloff & length end-fades (no open rings, no hard edges)
-  const beamFadeTexture = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      const imgData = ctx.createImageData(256, 512);
-      const data = imgData.data;
-
-      for (let y = 0; y < 512; y++) {
-        const v = y / 511; // 0 = head, 1 = pitch target
-
-        // Length fade: 0 at head (v=0), smoothly ramps up by v=0.06, holds, then softly fades to 0 at v=1.0
-        let lenAlpha = 1.0;
-        if (v < 0.06) {
-          lenAlpha = Math.pow(v / 0.06, 2.0); // Exactly 0.0 at v=0 (no open ring)
-        } else if (v > 0.38) {
-          const t = (v - 0.38) / 0.62;
-          lenAlpha = Math.pow(Math.cos(t * Math.PI * 0.5), 2.2); // Soft taper toward pitch to prevent wash-out
-        }
-
-        for (let x = 0; x < 256; x++) {
-          const u = x / 255;
-          // Radial Gaussian falloff across width (soft edges like haze)
-          const radDist = (u - 0.5) * 2.0; // -1 to 1
-          const radAlpha = Math.exp(-4.2 * radDist * radDist);
-
-          const finalAlpha = Math.min(1.0, lenAlpha * radAlpha);
-          const idx = (y * 256 + x) * 4;
-
-          // Warm floodlight beam color
-          data[idx] = 255;     // R
-          data[idx + 1] = 252; // G
-          data[idx + 2] = 236; // B
-          data[idx + 3] = Math.round(finalAlpha * 255);
-        }
-      }
-      ctx.putImageData(imgData, 0, 0);
-    }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.ClampToEdgeWrapping;
-    tex.wrapT = THREE.ClampToEdgeWrapping;
-    return tex;
   }, []);
 
   const towers = useMemo(
     () => [
-      { id: 't-nw', pos: [-46, 0, -88] as [number, number, number], target: [5, 0, -8] as [number, number, number] },
-      { id: 't-ne', pos: [46, 0, -88] as [number, number, number], target: [-5, 0, -8] as [number, number, number] },
-      { id: 't-east', pos: [88, 0, -10] as [number, number, number], target: [-6, 0, -2] as [number, number, number] },
-      { id: 't-se', pos: [88, 0, 48] as [number, number, number], target: [-5, 0, 8] as [number, number, number] },
-      { id: 't-sw', pos: [-88, 0, 48] as [number, number, number], target: [5, 0, 8] as [number, number, number] },
-      { id: 't-west', pos: [-88, 0, -10] as [number, number, number], target: [6, 0, -2] as [number, number, number] },
+      { id: 't-nw', pos: [-46, 0, -88] as [number, number, number], target: [8, 0, -12] as [number, number, number] },
+      { id: 't-ne', pos: [46, 0, -88] as [number, number, number], target: [-8, 0, -12] as [number, number, number] },
+      { id: 't-east', pos: [88, 0, -10] as [number, number, number], target: [-10, 0, 4] as [number, number, number] },
+      { id: 't-se', pos: [88, 0, 48] as [number, number, number], target: [-6, 0, 15] as [number, number, number] },
+      { id: 't-sw', pos: [-88, 0, 48] as [number, number, number], target: [6, 0, 15] as [number, number, number] },
+      { id: 't-west', pos: [-88, 0, -10] as [number, number, number], target: [10, 0, 4] as [number, number, number] },
     ],
     []
   );
@@ -1153,7 +1125,7 @@ const ProceduralStadiumDetails: React.FC<{
         </mesh>
       </group>
 
-      {/* 6 Floodlight Towers with High-Density Lamp Heads, Halos, Flares & Volumetric Beams */}
+      {/* 6 Floodlight Towers with High-Density Lamp Heads, Clusters, and Star Glare */}
       {towers.map((tower) => (
         <SingleFloodlightTower
           key={tower.id}
@@ -1162,9 +1134,8 @@ const ProceduralStadiumDetails: React.FC<{
           isLiteMode={isLiteMode}
           stadiumLevel={stadiumLevel}
           showBeamAxes={showBeamAxes}
-          beamFadeTexture={beamFadeTexture}
-          haloTexture={haloTexture}
-          streakTexture={streakTexture}
+          starFlareTexture={starFlareTexture}
+          headHazeTexture={headHazeTexture}
           lampFaceTexture={lampFaceTexture}
         />
       ))}
@@ -1207,25 +1178,22 @@ const SingleFloodlightTower: React.FC<{
   };
   isEvening: boolean;
   isLiteMode?: boolean;
-  stadiumLevel: StadiumDrillLevel;
+  stadiumLevel?: StadiumDrillLevel;
   showBeamAxes?: boolean;
-  beamFadeTexture: THREE.Texture;
-  haloTexture: THREE.Texture;
-  streakTexture: THREE.Texture;
+  starFlareTexture: THREE.Texture;
+  headHazeTexture: THREE.Texture;
   lampFaceTexture: THREE.Texture;
 }> = ({
   tower,
   isEvening,
   isLiteMode,
-  stadiumLevel,
+  stadiumLevel: _stadiumLevel,
   showBeamAxes,
-  beamFadeTexture,
-  haloTexture,
-  streakTexture,
+  starFlareTexture,
+  headHazeTexture,
   lampFaceTexture,
 }) => {
-  const haloRef = useRef<THREE.Mesh>(null);
-  const beamGroupRef = useRef<THREE.Group>(null);
+  const starFlareRef = useRef<THREE.Mesh>(null);
   const spotLightRef = useRef<THREE.SpotLight>(null);
   const spotTargetRef = useRef<THREE.Object3D>(null);
 
@@ -1245,8 +1213,6 @@ const SingleFloodlightTower: React.FC<{
     const D = Math.hypot(localTgt.x, localTgt.z);
     const ang = (Math.atan2(46.2, D) * 180) / Math.PI;
 
-    // Use dummy Object3D to compute exact lookAt orientation:
-    // Local +Z points toward the pitch target; panel width stays level with horizon (no roll/bank)
     const dummy = new THREE.Object3D();
     dummy.lookAt(localTgt);
 
@@ -1283,26 +1249,20 @@ const SingleFloodlightTower: React.FC<{
     }
   }, [tower, headWorldPos, angleDeg, beamLength]);
 
-  // Distance fading & bowl culling for beams
+  // Star flare scales smoothly with camera distance
   useFrame(({ camera }) => {
     const camPos = camera.position;
     const distToHead = camPos.distanceTo(headWorldPos);
 
-    if (haloRef.current) {
+    if (starFlareRef.current) {
       if (!isEvening) {
-        haloRef.current.visible = false;
+        starFlareRef.current.visible = false;
       } else {
-        haloRef.current.visible = true;
-        // Keep the glow small and bright in front of lamp face (never spreading into sky)
-        const scaleVal = Math.min(1.4, Math.max(0.9, distToHead * 0.012));
-        haloRef.current.scale.set(scaleVal, scaleVal, 1);
+        starFlareRef.current.visible = true;
+        // Soft optical star glare that scales naturally with distance
+        const scaleVal = Math.min(1.7, Math.max(0.65, distToHead * 0.009));
+        starFlareRef.current.scale.set(scaleVal, scaleVal, 1);
       }
-    }
-
-    if (beamGroupRef.current) {
-      const camDistToOrigin = Math.hypot(camPos.x, camPos.z);
-      const isInsideBowl = (camPos.y < 22 && camDistToOrigin < 86) || stadiumLevel === 'seat';
-      beamGroupRef.current.visible = isEvening && !isInsideBowl;
     }
   });
 
@@ -1320,7 +1280,7 @@ const SingleFloodlightTower: React.FC<{
         <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.3} />
       </mesh>
 
-      {/* 3. Mast Top Platform Collar & Maintenance Railing - stops at y=45.6m, behind the tilted head */}
+      {/* 3. Mast Top Platform Collar & Maintenance Railing */}
       <mesh position={[0, 45.2, 0]}>
         <cylinderGeometry args={[1.05, 0.72, 0.5, 12]} />
         <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
@@ -1336,14 +1296,12 @@ const SingleFloodlightTower: React.FC<{
 
       {/* 4. Swivel Mounting Yoke & Forward Cantilevered Floodlight Head Unit at [0, 46.2, 0] */}
       <group position={[0, 46.2, 0]} quaternion={headQuaternion}>
-        {/* Cantilever Bracket / Yoke: reaches forward from the mast top to the rear of the lamp housing */}
+        {/* Cantilever Bracket / Yoke */}
         <group>
-          {/* Central Swivel Base Collar */}
           <mesh position={[0, -0.3, 0]}>
             <cylinderGeometry args={[0.65, 0.65, 0.8, 8]} />
             <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.3} />
           </mesh>
-          {/* Dual Heavy Forward Cantilever Struts reaching to z=1.7m */}
           <mesh position={[-1.6, 0.5, 0.9]} rotation={[0.48, -0.12, 0]}>
             <boxGeometry args={[0.3, 0.35, 2.2]} />
             <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
@@ -1352,7 +1310,6 @@ const SingleFloodlightTower: React.FC<{
             <boxGeometry args={[0.3, 0.35, 2.2]} />
             <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
           </mesh>
-          {/* Transverse Cross-Beam on rear of housing */}
           <mesh position={[0, 1.0, 1.75]}>
             <boxGeometry args={[5.2, 0.4, 0.4]} />
             <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
@@ -1361,7 +1318,7 @@ const SingleFloodlightTower: React.FC<{
 
         {/* ─── HEAD ASSEMBLY (Forward-offset at z=2.1m, y=1.0m, facing pitch along +Z) ─── */}
 
-        {/* Dark Graphite Housing Frame (z from 1.8 to 2.4) */}
+        {/* Dark Graphite Housing Frame */}
         <mesh position={[0, 1.0, 2.1]} castShadow>
           <boxGeometry args={[9.6, 5.6, 0.6]} />
           <meshStandardMaterial color="#0b0f19" metalness={0.85} roughness={0.3} />
@@ -1381,7 +1338,7 @@ const SingleFloodlightTower: React.FC<{
           </mesh>
         ))}
 
-        {/* Rear Maintenance Catwalk & Safety Lattice (Behind housing at z=1.3m) */}
+        {/* Rear Maintenance Catwalk & Safety Lattice */}
         <mesh position={[0, -1.4, 1.3]}>
           <boxGeometry args={[8.8, 0.2, 1.0]} />
           <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
@@ -1391,7 +1348,7 @@ const SingleFloodlightTower: React.FC<{
           <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} wireframe />
         </mesh>
 
-        {/* Dense Front Panel Face with 60 Emissive Lamp Cells (At z=2.41m, completely open face facing pitch) */}
+        {/* Dense Front Panel Face with Dark Graphite Base */}
         <mesh position={[0, 1.0, 2.41]}>
           <planeGeometry args={[9.2, 5.2]} />
           <meshStandardMaterial
@@ -1399,13 +1356,13 @@ const SingleFloodlightTower: React.FC<{
             map={lampFaceTexture}
             emissive={isEvening ? '#fffde8' : '#000000'}
             emissiveMap={lampFaceTexture}
-            emissiveIntensity={isEvening ? 5.8 : 0.0}
-            roughness={0.15}
-            metalness={0.6}
+            emissiveIntensity={isEvening ? 1.5 : 0.0}
+            roughness={0.25}
+            metalness={0.7}
           />
         </mesh>
 
-        {/* 3D Micro-Lens Bulbs Array (60 physical lamp elements at z=2.43m) */}
+        {/* 60 High-Intensity Micro-Lens Emissive LED Points (Triggers bloom and realistic camera point flare) */}
         {[-4.05, -3.15, -2.25, -1.35, -0.45, 0.45, 1.35, 2.25, 3.15, 4.05].map((bx, bi) =>
           [-2.0, -1.2, -0.4, 0.4, 1.2, 2.0].map((by, ri) => (
             <mesh
@@ -1413,41 +1370,43 @@ const SingleFloodlightTower: React.FC<{
               position={[bx, 1.0 + by, 2.43]}
               rotation={[Math.PI / 2, 0, 0]}
             >
-              <cylinderGeometry args={[0.34, 0.38, 0.08, 10]} />
+              <cylinderGeometry args={[0.32, 0.38, 0.08, 10]} />
               <meshStandardMaterial
                 color={isEvening ? '#ffffff' : '#334155'}
-                emissive={isEvening ? '#fffdf0' : '#000000'}
-                emissiveIntensity={isEvening ? 5.5 : 0.0}
-                roughness={0.1}
-                metalness={isEvening ? 0.3 : 0.8}
+                emissive={isEvening ? '#ffffff' : '#000000'}
+                emissiveIntensity={isEvening ? 3.2 : 0.0}
+                roughness={0.08}
+                metalness={isEvening ? 0.2 : 0.8}
               />
             </mesh>
           ))
         )}
 
-        {/* Halo Glow Sprite sits right in front of front face at z=2.48m (no sky spread) */}
-        <mesh ref={haloRef} position={[0, 1.0, 2.48]}>
-          <planeGeometry args={[10.5, 6.2]} />
-          <meshBasicMaterial
-            map={haloTexture}
-            color="#fffdf2"
-            transparent
-            opacity={0.85}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            depthTest={true}
-          />
-        </mesh>
-
-        {/* Subtle Horizontal Flare Streak in front of lamp face */}
+        {/* Optical Star Glare Sprite centered on lamp head (scales with camera distance, no big flat halo) */}
         {isEvening && (
-          <mesh position={[0, 1.0, 2.50]}>
-            <planeGeometry args={[16.0, 1.2]} />
+          <mesh ref={starFlareRef} position={[0, 1.0, 2.50]}>
+            <planeGeometry args={[2.8, 2.8]} />
             <meshBasicMaterial
-              map={streakTexture}
-              color="#fffbeb"
+              map={starFlareTexture}
+              color="#fffdf0"
               transparent
-              opacity={0.28}
+              opacity={0.25}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              depthTest={true}
+            />
+          </mesh>
+        )}
+
+        {/* Faint localized head haze (3 to 5% opacity, fading out within 2.5 meters) */}
+        {isEvening && (
+          <mesh position={[0, 1.0, 2.49]}>
+            <planeGeometry args={[5.2, 3.2]} />
+            <meshBasicMaterial
+              map={headHazeTexture}
+              color="#fffdf2"
+              transparent
+              opacity={0.03}
               blending={THREE.AdditiveBlending}
               depthWrite={false}
               depthTest={true}
@@ -1458,56 +1417,22 @@ const SingleFloodlightTower: React.FC<{
         {/* Dedicated target object for SpotLight at exact pitch target distance */}
         <object3D ref={spotTargetRef} position={[0, 1.0, beamLength]} />
 
-        {/* Real SpotLight parented directly to the head at front face, targeting pitch target */}
+        {/* High-CRI Floodlight: wide angle (~1.0 rad), soft penumbra, even illumination across pitch */}
         <spotLight
           ref={spotLightRef}
           position={[0, 1.0, 2.48]}
-          intensity={isEvening ? 5.8 : 0}
-          color="#fffdf4"
-          angle={Math.PI / 4.2}
-          penumbra={0.90}
-          distance={beamLength + 25}
+          intensity={isEvening ? 280 : 0}
+          color="#fffdf0"
+          angle={1.05}
+          penumbra={0.88}
+          distance={180}
           decay={1.0}
-          castShadow={!isLiteMode && (tower.id.includes('nw') || tower.id.includes('se'))}
+          castShadow={!isLiteMode && (tower.id.includes('nw') || tower.id.includes('se') || tower.id.includes('west'))}
           shadow-mapSize={[1024, 1024]}
-          shadow-bias={-0.0004}
+          shadow-bias={-0.0003}
         />
 
-        {/* Volumetric Light Beam: Starts at front face z=2.48m, travels forward away from mast toward target */}
-        <group position={[0, 1.0, 2.48]}>
-          <group ref={beamGroupRef}>
-            <mesh position={[0, 0, (beamLength - 2.48) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.8, 18.0, beamLength - 2.48, 32, 8, true]} />
-              <meshBasicMaterial
-                map={beamFadeTexture}
-                color="#fffcf0"
-                transparent
-                opacity={0.084}
-                blending={THREE.AdditiveBlending}
-                side={THREE.DoubleSide}
-                depthWrite={false}
-                depthTest={true}
-              />
-            </mesh>
-
-            {/* Tri-plane cross billboards */}
-            {[0, Math.PI / 3, (2 * Math.PI) / 3].map((rotAngle, idx) => (
-              <mesh key={`cross-quad-${idx}`} position={[0, 0, (beamLength - 2.48) / 2]} rotation={[0, 0, rotAngle]}>
-                <planeGeometry args={[16.0, beamLength - 2.48]} />
-                <meshBasicMaterial
-                  map={beamFadeTexture}
-                  color="#fffcf0"
-                  transparent
-                  opacity={0.070}
-                  blending={THREE.AdditiveBlending}
-                  side={THREE.DoubleSide}
-                  depthWrite={false}
-                  depthTest={true}
-                />
-              </mesh>
-            ))}
-          </group>
-        </group>
+        {/* NOTE: Solid light cone geometry has been deleted; in clear air, beams are invisible */}
 
         {/* Debug Axis Line and Target Disc on Pitch (enabled via ?debug=1 or toggle button) */}
         {showBeamAxes && (
@@ -1909,34 +1834,28 @@ const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = (
       <primitive object={pitchTarget} />
       {isEvening ? (
         <>
-          {/* Warm stadium bowl ambient fill making stands & seat colors vibrant and readable */}
+          {/* Faint night ambient fill: deep blue sky and dark earth tone */}
           <hemisphereLight
-            args={['#788ea8', '#382f28', 1.22]}
+            args={['#384860', '#0a0d14', 0.55]}
           />
 
-          {/* Central diffuse top fill */}
-          <directionalLight
-            position={[0, 85, 0]}
-            intensity={1.25}
-            color="#fff8ea"
+          {/* Luminous pitch-to-stands warm grass bounce:
+              simulates massive upward radiance from brightly lit turf onto lower bowl stands */}
+          <pointLight
+            position={[0, 2.0, 0]}
+            color="#bbf7d0"
+            intensity={180}
+            distance={110}
+            decay={1.0}
           />
 
-          {/* Diagonal stadium bounce fills for multi-floodlight ambient radiance */}
-          <directionalLight
-            position={[65, 45, 65]}
-            intensity={0.55}
-            color="#fed7aa"
-          />
-          <directionalLight
-            position={[-65, 45, -65]}
-            intensity={0.55}
-            color="#fed7aa"
-          />
-          {/* Far stand warm fill: raises illumination on opposite (North/NW) stands so seats are vibrant & readable */}
-          <directionalLight
-            position={[10, 48, 70]}
-            intensity={0.85}
-            color="#ffedd5"
+          {/* Bowl interior diffuse fill: softens shadows inside the seating bowl while falling off to zero outside */}
+          <pointLight
+            position={[0, 14.0, 0]}
+            color="#fffdf4"
+            intensity={160}
+            distance={115}
+            decay={1.0}
           />
         </>
       ) : (
@@ -1966,6 +1885,48 @@ const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = (
       )}
     </>
   );
+};
+
+// ─── 6c. Photorealistic Night Stadium Bloom & Tone Mapping ───
+const StadiumPostProcessing: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = ({ isEvening, isLiteMode }) => {
+  const { gl, scene, camera, size } = useThree();
+
+  const composer = useMemo(() => {
+    if (isLiteMode || !isEvening) return null;
+    const comp = new EffectComposer(gl);
+    const renderPass = new RenderPass(scene, camera);
+    comp.addPass(renderPass);
+
+    // UnrealBloomPass: threshold 0.98 ensures only high-intensity emissive meshes (LED bulbs, scoreboard) bloom cleanly
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(size.width, size.height),
+      0.32, // bloom strength
+      0.10, // bloom radius
+      0.98  // bloom threshold
+    );
+    comp.addPass(bloomPass);
+
+    const outputPass = new OutputPass();
+    comp.addPass(outputPass);
+
+    return comp;
+  }, [gl, scene, camera, size.width, size.height, isEvening, isLiteMode]);
+
+  useEffect(() => {
+    if (composer) {
+      composer.setSize(size.width, size.height);
+    }
+  }, [composer, size.width, size.height]);
+
+  useFrame((state) => {
+    if (composer && isEvening && !isLiteMode) {
+      composer.render();
+    } else {
+      state.gl.render(state.scene, state.camera);
+    }
+  }, 1);
+
+  return null;
 };
 
 // ─── 7. Main StadiumMap3D Component ───
@@ -2260,14 +2221,17 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
           antialias: true,
           alpha: false,
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: isEvening ? 1.14 : 1.05,
+          toneMappingExposure: isEvening ? 1.12 : 1.05,
         }}
         shadows={!isLiteMode}
       >
-        <color attach="background" args={[isEvening ? '#060913' : '#87ceeb']} />
+        <color key={isEvening ? 'col-eve' : 'col-day'} attach="background" args={[isEvening ? '#010206' : '#87ceeb']} />
         {!isLiteMode && (
-          <fog attach="fog" args={[isEvening ? '#0d1322' : '#bae6fd', 140, 780]} />
+          <fog key={isEvening ? 'fog-eve' : 'fog-day'} attach="fog" args={[isEvening ? '#010206' : '#bae6fd', isEvening ? 160 : 140, isEvening ? 680 : 780]} />
         )}
+
+        {/* Photorealistic Night Stadium Bloom & Post-processing */}
+        <StadiumPostProcessing isEvening={isEvening} isLiteMode={isLiteMode} />
 
         {/* Dynamic Stadium Lighting (Floodlights / Bright Daylight) */}
         <StadiumLighting isEvening={isEvening} isLiteMode={isLiteMode} />

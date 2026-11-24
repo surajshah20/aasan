@@ -925,51 +925,59 @@ const ProceduralStadiumDetails: React.FC<{
 }> = ({ isEvening, stadiumLevel, showBeamAxes, isLiteMode }) => {
   const scoreboardTex = useMemo(() => {
     const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 512;
+    canvas.width = 2048;
+    canvas.height = 1024;
     const ctx = canvas.getContext('2d');
     if (ctx) {
+      // High contrast deep stadium black display background
       ctx.fillStyle = '#05070d';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      // Top Header: Navy banner with yellow tournament title
       ctx.fillStyle = '#002b7f';
-      ctx.fillRect(0, 0, canvas.width, 68);
+      ctx.fillRect(0, 0, canvas.width, 136);
       ctx.fillStyle = '#facc15';
-      ctx.font = 'bold 34px system-ui, sans-serif';
+      ctx.font = 'bold 64px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('T20 TRI-SERIES FINAL  ·  UPCOMING MATCH', 512, 45);
+      ctx.fillText('T20 TRI-SERIES FINAL  ·  UPCOMING MATCH', 1024, 90);
 
+      // Teams: Bold white crisp lettering
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 64px system-ui, sans-serif';
-      ctx.fillText('NEPAL   vs   NETHERLANDS', 512, 160);
+      ctx.font = '900 128px system-ui, -apple-system, sans-serif';
+      ctx.fillText('NEPAL   vs   NETHERLANDS', 1024, 320);
 
+      // Match DateTime: Vibrant cyan monospace
       ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 44px monospace';
-      ctx.fillText('28 NOV 2026  ·  01:15 PM NPT', 512, 230);
+      ctx.font = 'bold 84px monospace';
+      ctx.fillText('28 NOV 2026  ·  01:15 PM NPT', 1024, 460);
 
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 30px system-ui, sans-serif';
-      ctx.fillText('TU INTERNATIONAL CRICKET GROUND, KIRTIPUR', 512, 290);
+      // Venue Location
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = 'bold 56px system-ui, -apple-system, sans-serif';
+      ctx.fillText('TU INTERNATIONAL CRICKET GROUND, KIRTIPUR', 1024, 580);
 
-      ctx.fillStyle = '#1e293b';
+      // Info pill badge for Toss & Gates
+      ctx.fillStyle = '#0f172a';
       ctx.beginPath();
-      ctx.roundRect(160, 335, 704, 62, 12);
+      ctx.roundRect(320, 670, 1408, 120, 24);
       ctx.fill();
       ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 4;
       ctx.stroke();
 
       ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 28px monospace';
-      ctx.fillText('TOSS: 12:45 PM  ·  GATES OPEN: 10:00 AM', 512, 375);
+      ctx.font = 'bold 52px monospace';
+      ctx.fillText('TOSS: 12:45 PM  ·  GATES OPEN: 10:00 AM', 1024, 750);
 
+      // Bottom Bar: CAN Red Banner
       ctx.fillStyle = '#dc2626';
-      ctx.fillRect(0, 444, canvas.width, 68);
+      ctx.fillRect(0, 888, canvas.width, 136);
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 28px system-ui, sans-serif';
-      ctx.fillText('CRICKET ASSOCIATION OF NEPAL (CAN)', 512, 486);
+      ctx.font = 'bold 54px system-ui, -apple-system, sans-serif';
+      ctx.fillText('CRICKET ASSOCIATION OF NEPAL (CAN)', 1024, 976);
     }
     const tex = new THREE.CanvasTexture(canvas);
+    tex.anisotropy = 8;
     return tex;
   }, []);
 
@@ -1082,16 +1090,16 @@ const ProceduralStadiumDetails: React.FC<{
         let lenAlpha = 1.0;
         if (v < 0.06) {
           lenAlpha = Math.pow(v / 0.06, 2.0); // Exactly 0.0 at v=0 (no open ring)
-        } else if (v > 0.45) {
-          const t = (v - 0.45) / 0.55;
-          lenAlpha = Math.pow(Math.cos(t * Math.PI * 0.5), 1.8); // Fades to 0 at ground
+        } else if (v > 0.38) {
+          const t = (v - 0.38) / 0.62;
+          lenAlpha = Math.pow(Math.cos(t * Math.PI * 0.5), 2.2); // Soft taper toward pitch to prevent wash-out
         }
 
         for (let x = 0; x < 256; x++) {
           const u = x / 255;
           // Radial Gaussian falloff across width (soft edges like haze)
           const radDist = (u - 0.5) * 2.0; // -1 to 1
-          const radAlpha = Math.exp(-3.5 * radDist * radDist);
+          const radAlpha = Math.exp(-4.2 * radDist * radDist);
 
           const finalAlpha = Math.min(1.0, lenAlpha * radAlpha);
           const idx = (y * 256 + x) * 4;
@@ -1161,28 +1169,28 @@ const ProceduralStadiumDetails: React.FC<{
         />
       ))}
 
-      {/* Electronic Scoreboard - Formally structured with foundation, steel pylons & pitch-facing display */}
-      <group position={[48, 15.5, -84]} rotation={[0, -0.52, 0]}>
+      {/* Electronic Scoreboard (40% larger for crystal clarity from aerial & opposite seats) */}
+      <group position={[48, 17.5, -84]} rotation={[0, -0.52, 0]}>
         {/* Concrete Foundation Base Footing */}
-        <mesh position={[0, -14.0, 0]} castShadow receiveShadow>
-          <boxGeometry args={[4.2, 3.0, 4.2]} />
+        <mesh position={[0, -16.0, 0]} castShadow receiveShadow>
+          <boxGeometry args={[6.0, 3.2, 6.0]} />
           <meshStandardMaterial color="#334155" roughness={0.8} />
         </mesh>
         {/* Dual Steel Lattice Support Pylons */}
-        {[-2.5, 2.5].map((px, idx) => (
-          <mesh key={`pylon-${idx}`} position={[px, -7.5, 0]}>
-            <cylinderGeometry args={[0.35, 0.45, 13.0, 8]} />
+        {[-3.6, 3.6].map((px, idx) => (
+          <mesh key={`pylon-${idx}`} position={[px, -8.5, 0]}>
+            <cylinderGeometry args={[0.45, 0.60, 15.0, 8]} />
             <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.3} />
           </mesh>
         ))}
-        {/* Scoreboard Housing */}
+        {/* Scoreboard Housing: 14.2 * 1.4 = 19.9, 7.4 * 1.4 = 10.4 */}
         <mesh position={[0, 0, 0]} castShadow>
-          <boxGeometry args={[14.2, 7.4, 0.8]} />
+          <boxGeometry args={[20.0, 10.4, 0.9]} />
           <meshStandardMaterial color="#0b0f19" metalness={0.7} roughness={0.4} />
         </mesh>
-        {/* Electronic Display Face */}
-        <mesh position={[0, 0, 0.42]}>
-          <planeGeometry args={[13.6, 6.8]} />
+        {/* Electronic Display Face: 13.6 * 1.4 = 19.0, 6.8 * 1.4 = 9.5 */}
+        <mesh position={[0, 0, 0.48]}>
+          <planeGeometry args={[19.2, 9.6]} />
           <meshBasicMaterial map={scoreboardTex} />
         </mesh>
       </group>
@@ -1423,10 +1431,10 @@ const SingleFloodlightTower: React.FC<{
         <spotLight
           ref={spotLightRef}
           position={[0, 0, 0.45]}
-          intensity={isEvening ? 7.5 : 0}
+          intensity={isEvening ? 5.8 : 0}
           color="#fffdf4"
           angle={Math.PI / 4.2}
-          penumbra={0.82}
+          penumbra={0.90}
           distance={beamLength + 25}
           decay={1.0}
           castShadow={!isLiteMode && (tower.id.includes('nw') || tower.id.includes('se'))}
@@ -1443,7 +1451,7 @@ const SingleFloodlightTower: React.FC<{
                 map={beamFadeTexture}
                 color="#fffcf0"
                 transparent
-                opacity={0.12}
+                opacity={0.084}
                 blending={THREE.AdditiveBlending}
                 side={THREE.DoubleSide}
                 depthWrite={false}
@@ -1458,7 +1466,7 @@ const SingleFloodlightTower: React.FC<{
                   map={beamFadeTexture}
                   color="#fffcf0"
                   transparent
-                  opacity={0.10}
+                  opacity={0.070}
                   blending={THREE.AdditiveBlending}
                   side={THREE.DoubleSide}
                   depthWrite={false}
@@ -1956,13 +1964,15 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
   const [hoveredSeat, setHoveredSeat] = useState<StadiumSeatInstance | null>(null);
   const [lightingMode, setLightingMode] = useState<'evening' | 'day'>('evening');
-  const [showBeamAxes, setShowBeamAxes] = useState(() => {
+  const isDebugUrl = useMemo(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search);
       return p.get('debug') === '1';
     }
     return false;
-  });
+  }, []);
+
+  const [showBeamAxes, setShowBeamAxes] = useState(() => isDebugUrl);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -2516,19 +2526,21 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
               )}
             </div>
 
-            {/* Toggle for Floodlight Beam Axes */}
-            <button
-              onClick={() => setShowBeamAxes(!showBeamAxes)}
-              className={`p-2 rounded-full border backdrop-blur-xl transition-all shadow-lg active:scale-95 flex items-center justify-center ${
-                showBeamAxes
-                  ? 'bg-sky-500 text-white border-sky-400 shadow-sky-500/30'
-                  : 'bg-[#060810]/70 hover:bg-[#060810]/95 text-white/70 hover:text-white border-white/15'
-              }`}
-              title="Floodlight beam guide axes (visual alignment)"
-              aria-label="Floodlight beam guide axes"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-            </button>
+            {/* Toggle for Floodlight Beam Axes - only visible when ?debug=1 is in URL */}
+            {isDebugUrl && (
+              <button
+                onClick={() => setShowBeamAxes(!showBeamAxes)}
+                className={`p-2 rounded-full border backdrop-blur-xl transition-all shadow-lg active:scale-95 flex items-center justify-center ${
+                  showBeamAxes
+                    ? 'bg-sky-500 text-white border-sky-400 shadow-sky-500/30'
+                    : 'bg-[#060810]/70 hover:bg-[#060810]/95 text-white/70 hover:text-white border-white/15'
+                }`}
+                title="Floodlight beam guide axes (visual alignment)"
+                aria-label="Floodlight beam guide axes"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+              </button>
+            )}
 
             {/* Day / Evening Mode Toggle */}
             <button

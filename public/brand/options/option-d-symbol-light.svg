@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Top Shirorekha Bar -->
+  <rect x="18" y="18" width="64" height="7" rx="3.5" fill="#0a0b10"/>
+  <!-- Left Numeral '3' Curved Strokes -->
+  <path d="M 24 28 C 38 28 44 34 44 42 C 44 48 38 52 32 52" stroke="#0a0b10" stroke-width="7" stroke-linecap="round"/>
+  <path d="M 32 52 C 42 52 46 58 46 66 C 46 75 36 82 22 82" stroke="#0a0b10" stroke-width="7" stroke-linecap="round"/>
+  <!-- Horizontal Seat Connector -->
+  <rect x="34" y="48.5" width="28" height="7" rx="3.5" fill="#dc143c"/>
+  <!-- First Vertical Stem -->
+  <rect x="56" y="18" width="7" height="64" rx="3.5" fill="#0a0b10"/>
+  <!-- Second Vertical Stem -->
+  <rect x="73" y="18" width="7" height="64" rx="3.5" fill="#dc143c"/>
+  <!-- Seat Dot Highlight -->
+  <circle cx="48" cy="38" r="3.5" fill="#dc143c"/>
+</svg>

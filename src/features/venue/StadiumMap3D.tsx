@@ -1229,21 +1229,21 @@ const SingleFloodlightTower: React.FC<{
   const spotLightRef = useRef<THREE.SpotLight>(null);
   const spotTargetRef = useRef<THREE.Object3D>(null);
 
-  // Exact head world coordinates: top of mast at [tx, 49.5, tz]
+  // Exact head world coordinates: top of mast at [tx, 47.2, tz]
   const headWorldPos = useMemo(() => {
-    return new THREE.Vector3(tower.pos[0], 49.5, tower.pos[2]);
+    return new THREE.Vector3(tower.pos[0], 47.2, tower.pos[2]);
   }, [tower]);
 
   // Compute direction, distance, lookAt quaternion, and angle below horizontal
   const { headQuaternion, beamLength, angleDeg } = useMemo(() => {
     const localTgt = new THREE.Vector3(
       tower.target[0] - tower.pos[0],
-      -49.5,
+      -46.2,
       tower.target[2] - tower.pos[2]
     );
     const len = localTgt.length();
     const D = Math.hypot(localTgt.x, localTgt.z);
-    const ang = (Math.atan2(49.5, D) * 180) / Math.PI;
+    const ang = (Math.atan2(46.2, D) * 180) / Math.PI;
 
     // Use dummy Object3D to compute exact lookAt orientation:
     // Local +Z points toward the pitch target; panel width stays level with horizon (no roll/bank)
@@ -1268,13 +1268,13 @@ const SingleFloodlightTower: React.FC<{
   useEffect(() => {
     const isValid = angleDeg >= 20 && angleDeg <= 40;
     console.log(
-      `[Floodlight Orientation Check] Tower: ${tower.id} | Head World: [${headWorldPos.x.toFixed(1)}, 49.5, ${headWorldPos.z.toFixed(1)}] | Pitch Target: [${tower.target.join(', ')}] | Angle below horizontal: ${angleDeg.toFixed(1)}° (${isValid ? 'PASS: 20°-40°' : 'FAIL: OUT OF RANGE'})`
+      `[Floodlight Orientation Check] Tower: ${tower.id} | Head World: [${headWorldPos.x.toFixed(1)}, 47.2, ${headWorldPos.z.toFixed(1)}] | Pitch Target: [${tower.target.join(', ')}] | Angle below horizontal: ${angleDeg.toFixed(1)}° (${isValid ? 'PASS: 20°-40°' : 'FAIL: OUT OF RANGE'})`
     );
     if (typeof window !== 'undefined') {
       if (!(window as any).__FLOODLIGHT_ANGLES__) (window as any).__FLOODLIGHT_ANGLES__ = {};
       (window as any).__FLOODLIGHT_ANGLES__[tower.id] = {
         id: tower.id,
-        head: [headWorldPos.x, 49.5, headWorldPos.z],
+        head: [headWorldPos.x, 47.2, headWorldPos.z],
         target: tower.target,
         distance: Number(beamLength.toFixed(1)),
         angleDeg: Number(angleDeg.toFixed(1)),
@@ -1314,56 +1314,85 @@ const SingleFloodlightTower: React.FC<{
         <meshStandardMaterial color="#334155" roughness={0.8} />
       </mesh>
 
-      {/* 2. Main Steel Mast Pole - strictly vertical, does NOT rotate */}
-      <mesh position={[0, 24, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.65, 2.1, 48, 12]} />
+      {/* 2. Main Steel Mast Pole - strictly vertical, terminates cleanly at y=45.0m below the head */}
+      <mesh position={[0, 22.5, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.65, 2.1, 45.0, 12]} />
         <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.3} />
       </mesh>
 
-      {/* 3. Mast Top Mounting Bracket (swivel base) - vertical at mast top */}
-      <mesh position={[0, 48.6, 0]}>
-        <cylinderGeometry args={[0.95, 0.75, 1.2, 10]} />
+      {/* 3. Mast Top Platform Collar & Maintenance Railing - stops at y=45.6m, behind the tilted head */}
+      <mesh position={[0, 45.2, 0]}>
+        <cylinderGeometry args={[1.05, 0.72, 0.5, 12]} />
         <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
       </mesh>
-      <mesh position={[0, 49.3, 0]}>
-        <boxGeometry args={[1.5, 0.5, 1.5]} />
+      <mesh position={[0, 45.5, 0]}>
+        <cylinderGeometry args={[1.5, 1.5, 0.15, 12]} />
         <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
       </mesh>
+      <mesh position={[0, 46.0, 0]}>
+        <cylinderGeometry args={[1.45, 1.45, 0.9, 12, 1, true]} />
+        <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} wireframe />
+      </mesh>
 
-      {/* 4. Floodlight Head Unit at [0, 49.5, 0] - ONLY the head is rotated toward pitch target */}
-      <group position={[0, 49.5, 0]} quaternion={headQuaternion}>
-        {/* Dark Graphite Housing Frame */}
-        <mesh position={[0, 0, 0]} castShadow>
-          <boxGeometry args={[9.6, 5.6, 0.8]} />
+      {/* 4. Swivel Mounting Yoke & Forward Cantilevered Floodlight Head Unit at [0, 46.2, 0] */}
+      <group position={[0, 46.2, 0]} quaternion={headQuaternion}>
+        {/* Cantilever Bracket / Yoke: reaches forward from the mast top to the rear of the lamp housing */}
+        <group>
+          {/* Central Swivel Base Collar */}
+          <mesh position={[0, -0.3, 0]}>
+            <cylinderGeometry args={[0.65, 0.65, 0.8, 8]} />
+            <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.3} />
+          </mesh>
+          {/* Dual Heavy Forward Cantilever Struts reaching to z=1.7m */}
+          <mesh position={[-1.6, 0.5, 0.9]} rotation={[0.48, -0.12, 0]}>
+            <boxGeometry args={[0.3, 0.35, 2.2]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
+          </mesh>
+          <mesh position={[1.6, 0.5, 0.9]} rotation={[0.48, 0.12, 0]}>
+            <boxGeometry args={[0.3, 0.35, 2.2]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
+          </mesh>
+          {/* Transverse Cross-Beam on rear of housing */}
+          <mesh position={[0, 1.0, 1.75]}>
+            <boxGeometry args={[5.2, 0.4, 0.4]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
+          </mesh>
+        </group>
+
+        {/* ─── HEAD ASSEMBLY (Forward-offset at z=2.1m, y=1.0m, facing pitch along +Z) ─── */}
+
+        {/* Dark Graphite Housing Frame (z from 1.8 to 2.4) */}
+        <mesh position={[0, 1.0, 2.1]} castShadow>
+          <boxGeometry args={[9.6, 5.6, 0.6]} />
           <meshStandardMaterial color="#0b0f19" metalness={0.85} roughness={0.3} />
         </mesh>
 
         {/* Top Anti-Glare Visor */}
-        <mesh position={[0, 2.85, 0.35]} rotation={[0.20, 0, 0]}>
-          <boxGeometry args={[9.8, 0.15, 0.8]} />
+        <mesh position={[0, 3.82, 2.55]} rotation={[0.22, 0, 0]}>
+          <boxGeometry args={[9.8, 0.12, 0.45]} />
           <meshStandardMaterial color="#080c14" metalness={0.7} roughness={0.4} />
         </mesh>
 
         {/* Side Visor Flaps */}
         {[-4.85, 4.85].map((sx, idx) => (
-          <mesh key={`side-visor-${idx}`} position={[sx, 0, 0.25]} rotation={[0, sx > 0 ? -0.15 : 0.15, 0]}>
-            <boxGeometry args={[0.15, 5.6, 0.6]} />
+          <mesh key={`side-visor-${idx}`} position={[sx, 1.0, 2.45]}>
+            <boxGeometry args={[0.12, 5.6, 0.35]} />
             <meshStandardMaterial color="#080c14" metalness={0.7} roughness={0.4} />
           </mesh>
         ))}
 
-        {/* Rear Maintenance Catwalk & Lattice Railing */}
-        <mesh position={[0, -2.4, -0.6]}>
-          <boxGeometry args={[8.8, 0.2, 1.2]} />
+        {/* Rear Maintenance Catwalk & Safety Lattice (Behind housing at z=1.3m) */}
+        <mesh position={[0, -1.4, 1.3]}>
+          <boxGeometry args={[8.8, 0.2, 1.0]} />
           <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
         </mesh>
-        <mesh position={[0, -1.6, -1.1]}>
-          <boxGeometry args={[8.8, 1.4, 0.08]} />
+        <mesh position={[0, -0.8, 0.8]}>
+          <boxGeometry args={[8.8, 1.0, 0.08]} />
           <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} wireframe />
         </mesh>
 
-        {/* Dense Panel Face with 60 Emissive Lamp Cells (10 cols x 6 rows) pointing down along +Z */}
-        <mesh position={[0, 0, 0.41]}>
+        {/* Dense Front Panel Face with 60 Emissive Lamp Cells (At z=2.41m, completely open face facing pitch) */}
+        <mesh position={[0, 1.0, 2.41]}>
           <planeGeometry args={[9.2, 5.2]} />
           <meshStandardMaterial
             color="#ffffff"
@@ -1376,12 +1405,12 @@ const SingleFloodlightTower: React.FC<{
           />
         </mesh>
 
-        {/* 3D Micro-Lens Bulbs Array (60 physical lamp elements) */}
+        {/* 3D Micro-Lens Bulbs Array (60 physical lamp elements at z=2.43m) */}
         {[-4.05, -3.15, -2.25, -1.35, -0.45, 0.45, 1.35, 2.25, 3.15, 4.05].map((bx, bi) =>
           [-2.0, -1.2, -0.4, 0.4, 1.2, 2.0].map((by, ri) => (
             <mesh
               key={`bulb-${bi}-${ri}`}
-              position={[bx, by, 0.43]}
+              position={[bx, 1.0 + by, 2.43]}
               rotation={[Math.PI / 2, 0, 0]}
             >
               <cylinderGeometry args={[0.34, 0.38, 0.08, 10]} />
@@ -1396,8 +1425,8 @@ const SingleFloodlightTower: React.FC<{
           ))
         )}
 
-        {/* Halo Glow Sprite sits tightly in front of lamp face, pointing where lamp points (no sky spread) */}
-        <mesh ref={haloRef} position={[0, 0, 0.52]}>
+        {/* Halo Glow Sprite sits right in front of front face at z=2.48m (no sky spread) */}
+        <mesh ref={haloRef} position={[0, 1.0, 2.48]}>
           <planeGeometry args={[10.5, 6.2]} />
           <meshBasicMaterial
             map={haloTexture}
@@ -1406,12 +1435,13 @@ const SingleFloodlightTower: React.FC<{
             opacity={0.85}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
+            depthTest={true}
           />
         </mesh>
 
         {/* Subtle Horizontal Flare Streak in front of lamp face */}
         {isEvening && (
-          <mesh position={[0, 0, 0.54]}>
+          <mesh position={[0, 1.0, 2.50]}>
             <planeGeometry args={[16.0, 1.2]} />
             <meshBasicMaterial
               map={streakTexture}
@@ -1420,17 +1450,18 @@ const SingleFloodlightTower: React.FC<{
               opacity={0.28}
               blending={THREE.AdditiveBlending}
               depthWrite={false}
+              depthTest={true}
             />
           </mesh>
         )}
 
         {/* Dedicated target object for SpotLight at exact pitch target distance */}
-        <object3D ref={spotTargetRef} position={[0, 0, beamLength]} />
+        <object3D ref={spotTargetRef} position={[0, 1.0, beamLength]} />
 
-        {/* Real SpotLight parented directly to the head, targeting the exact pitch target */}
+        {/* Real SpotLight parented directly to the head at front face, targeting pitch target */}
         <spotLight
           ref={spotLightRef}
-          position={[0, 0, 0.45]}
+          position={[0, 1.0, 2.48]}
           intensity={isEvening ? 5.8 : 0}
           color="#fffdf4"
           angle={Math.PI / 4.2}
@@ -1442,11 +1473,11 @@ const SingleFloodlightTower: React.FC<{
           shadow-bias={-0.0004}
         />
 
-        {/* Volumetric Light Beam: Child of the head, starts at z=0.41 and expands to z=beamLength */}
-        <group position={[0, 0, 0.41]}>
+        {/* Volumetric Light Beam: Starts at front face z=2.48m, travels forward away from mast toward target */}
+        <group position={[0, 1.0, 2.48]}>
           <group ref={beamGroupRef}>
-            <mesh position={[0, 0, (beamLength - 0.41) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.8, 18.0, beamLength - 0.41, 32, 8, true]} />
+            <mesh position={[0, 0, (beamLength - 2.48) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.8, 18.0, beamLength - 2.48, 32, 8, true]} />
               <meshBasicMaterial
                 map={beamFadeTexture}
                 color="#fffcf0"
@@ -1455,13 +1486,14 @@ const SingleFloodlightTower: React.FC<{
                 blending={THREE.AdditiveBlending}
                 side={THREE.DoubleSide}
                 depthWrite={false}
+                depthTest={true}
               />
             </mesh>
 
             {/* Tri-plane cross billboards */}
             {[0, Math.PI / 3, (2 * Math.PI) / 3].map((rotAngle, idx) => (
-              <mesh key={`cross-quad-${idx}`} position={[0, 0, (beamLength - 0.41) / 2]} rotation={[0, 0, rotAngle]}>
-                <planeGeometry args={[16.0, beamLength - 0.41]} />
+              <mesh key={`cross-quad-${idx}`} position={[0, 0, (beamLength - 2.48) / 2]} rotation={[0, 0, rotAngle]}>
+                <planeGeometry args={[16.0, beamLength - 2.48]} />
                 <meshBasicMaterial
                   map={beamFadeTexture}
                   color="#fffcf0"
@@ -1470,6 +1502,7 @@ const SingleFloodlightTower: React.FC<{
                   blending={THREE.AdditiveBlending}
                   side={THREE.DoubleSide}
                   depthWrite={false}
+                  depthTest={true}
                 />
               </mesh>
             ))}
@@ -1479,13 +1512,13 @@ const SingleFloodlightTower: React.FC<{
         {/* Debug Axis Line and Target Disc on Pitch (enabled via ?debug=1 or toggle button) */}
         {showBeamAxes && (
           <group>
-            {/* Axis cylinder from head to pitch target */}
-            <mesh position={[0, 0, beamLength / 2]} rotation={[-Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.10, 0.10, beamLength, 8]} />
+            {/* Axis cylinder from front face z=2.48m to pitch target */}
+            <mesh position={[0, 1.0, (beamLength + 2.48) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.10, 0.10, beamLength - 2.48, 8]} />
               <meshBasicMaterial color="#38bdf8" />
             </mesh>
             {/* Target disc on pitch */}
-            <mesh position={[0, 0, beamLength]}>
+            <mesh position={[0, 1.0, beamLength]}>
               <ringGeometry args={[0.8, 1.4, 24]} />
               <meshBasicMaterial color="#38bdf8" side={THREE.DoubleSide} />
             </mesh>

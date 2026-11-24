@@ -310,12 +310,12 @@ const ProceduralCricketField: React.FC<{ isEvening: boolean }> = ({ isEvening })
     const ctx = canvas.getContext('2d');
     if (ctx) {
       // Saturated warm night grass base under floodlights (matching real TU ground photo)
-      ctx.fillStyle = isEvening ? '#328b40' : '#22783c';
+      ctx.fillStyle = isEvening ? '#246e34' : '#22783c';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const stripeH = 32;
       for (let y = 0; y < canvas.height; y += stripeH * 2) {
-        ctx.fillStyle = isEvening ? '#3ea34e' : '#2aa04e';
+        ctx.fillStyle = isEvening ? '#2c7f3e' : '#2aa04e';
         ctx.fillRect(0, y, canvas.width, stripeH);
       }
 
@@ -1093,12 +1093,12 @@ const ProceduralStadiumDetails: React.FC<{
 
   const towers = useMemo(
     () => [
-      { id: 't-nw', pos: [-46, 0, -88] as [number, number, number], target: [8, 0, -12] as [number, number, number] },
-      { id: 't-ne', pos: [46, 0, -88] as [number, number, number], target: [-8, 0, -12] as [number, number, number] },
-      { id: 't-east', pos: [88, 0, -10] as [number, number, number], target: [-10, 0, 4] as [number, number, number] },
-      { id: 't-se', pos: [88, 0, 48] as [number, number, number], target: [-6, 0, 15] as [number, number, number] },
-      { id: 't-sw', pos: [-88, 0, 48] as [number, number, number], target: [6, 0, 15] as [number, number, number] },
-      { id: 't-west', pos: [-88, 0, -10] as [number, number, number], target: [10, 0, 4] as [number, number, number] },
+      { id: 't-nw', pos: [-46, 0, -88] as [number, number, number], target: [16, 0, -22] as [number, number, number] },
+      { id: 't-ne', pos: [46, 0, -88] as [number, number, number], target: [-16, 0, -22] as [number, number, number] },
+      { id: 't-east', pos: [88, 0, -10] as [number, number, number], target: [-25, 0, 2] as [number, number, number] },
+      { id: 't-se', pos: [88, 0, 48] as [number, number, number], target: [-16, 0, 24] as [number, number, number] },
+      { id: 't-sw', pos: [-88, 0, 48] as [number, number, number], target: [16, 0, 24] as [number, number, number] },
+      { id: 't-west', pos: [-88, 0, -10] as [number, number, number], target: [25, 0, 2] as [number, number, number] },
     ],
     []
   );
@@ -1417,14 +1417,14 @@ const SingleFloodlightTower: React.FC<{
         {/* Dedicated target object for SpotLight at exact pitch target distance */}
         <object3D ref={spotTargetRef} position={[0, 1.0, beamLength]} />
 
-        {/* High-CRI Floodlight: wide angle (~1.0 rad), soft penumbra, even illumination across pitch */}
+        {/* High-CRI Floodlight: wide angle (~1.08 rad), soft penumbra, even illumination across pitch */}
         <spotLight
           ref={spotLightRef}
           position={[0, 1.0, 2.48]}
-          intensity={isEvening ? 280 : 0}
+          intensity={isEvening ? 135 : 0}
           color="#fffdf0"
-          angle={1.05}
-          penumbra={0.88}
+          angle={1.08}
+          penumbra={0.92}
           distance={180}
           decay={1.0}
           castShadow={!isLiteMode && (tower.id.includes('nw') || tower.id.includes('se') || tower.id.includes('west'))}
@@ -1816,7 +1816,7 @@ const StadiumSeatsMesh: React.FC<{
       castShadow
       receiveShadow
     >
-      <meshStandardMaterial roughness={0.45} metalness={0.08} />
+      <meshStandardMaterial roughness={0.84} metalness={0.02} />
     </instancedMesh>
   );
 };
@@ -1836,27 +1836,23 @@ const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = (
         <>
           {/* Faint night ambient fill: deep blue sky and dark earth tone */}
           <hemisphereLight
-            args={['#384860', '#0a0d14', 0.55]}
+            args={['#243248', '#080a10', 0.45]}
           />
 
-          {/* Luminous pitch-to-stands warm grass bounce:
-              simulates massive upward radiance from brightly lit turf onto lower bowl stands */}
+          {/* Stand warm spill fill: softly elevates illumination on lower and upper tiers without creating a hotspot on pitch */}
           <pointLight
-            position={[0, 2.0, 0]}
-            color="#bbf7d0"
-            intensity={180}
-            distance={110}
-            decay={1.0}
-          />
-
-          {/* Bowl interior diffuse fill: softens shadows inside the seating bowl while falling off to zero outside */}
-          <pointLight
-            position={[0, 14.0, 0]}
-            color="#fffdf4"
-            intensity={160}
+            position={[0, 26.0, 0]}
+            color="#fff8ec"
+            intensity={50}
             distance={115}
             decay={1.0}
           />
+
+          {/* Faint perimeter bounce: 4 low-intensity points near the boundary facing stands */}
+          <pointLight position={[38, 5, 38]} color="#dcfce7" intensity={22} distance={55} decay={1.0} />
+          <pointLight position={[-38, 5, 38]} color="#dcfce7" intensity={22} distance={55} decay={1.0} />
+          <pointLight position={[38, 5, -38]} color="#dcfce7" intensity={22} distance={55} decay={1.0} />
+          <pointLight position={[-38, 5, -38]} color="#dcfce7" intensity={22} distance={55} decay={1.0} />
         </>
       ) : (
         <>
@@ -1893,14 +1889,21 @@ const StadiumPostProcessing: React.FC<{ isEvening: boolean; isLiteMode: boolean 
 
   const composer = useMemo(() => {
     if (isLiteMode || !isEvening) return null;
-    const comp = new EffectComposer(gl);
+
+    // Use WebGLRenderTarget with 4x MSAA hardware multisampling to eliminate moiré and edge aliasing
+    const renderTarget = new THREE.WebGLRenderTarget(size.width, size.height, {
+      type: THREE.HalfFloatType,
+      samples: 4,
+    });
+
+    const comp = new EffectComposer(gl, renderTarget);
     const renderPass = new RenderPass(scene, camera);
     comp.addPass(renderPass);
 
-    // UnrealBloomPass: threshold 0.98 ensures only high-intensity emissive meshes (LED bulbs, scoreboard) bloom cleanly
+    // UnrealBloomPass: threshold 0.98 ensures bloom applies strictly to floodlight bulbs, scoreboard, and sponsor boards (0 pitch bloom)
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(size.width, size.height),
-      0.32, // bloom strength
+      0.28, // bloom strength
       0.10, // bloom radius
       0.98  // bloom threshold
     );
@@ -2077,7 +2080,7 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
     };
   }, [stadiumLevel, activeSeat, selectedBlockId, selectedStandId, blocksMap, standsMap, customCamera]);
 
-  // Seat Geometry
+  // Seat Geometry: Clean streamlined profile (cushion + backrest) without sub-pixel stanchions to eliminate moiré at distance
   const seatGeometry = useMemo(() => {
     const cushion = new THREE.BoxGeometry(0.44, 0.08, 0.36);
     cushion.translate(0, 0.04, 0.06);
@@ -2086,10 +2089,7 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
     backrest.rotateX(0.08);
     backrest.translate(0, 0.23, -0.10);
 
-    const stanchion = new THREE.BoxGeometry(0.08, 0.14, 0.22);
-    stanchion.translate(0, -0.04, -0.02);
-
-    return mergeGeometries([cushion, backrest, stanchion]);
+    return mergeGeometries([cushion, backrest]);
   }, []);
 
   // Raycasting on seats is only enabled in 'block' and 'seat' levels
@@ -2221,7 +2221,7 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
           antialias: true,
           alpha: false,
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: isEvening ? 1.12 : 1.05,
+          toneMappingExposure: isEvening ? 1.02 : 1.05,
         }}
         shadows={!isLiteMode}
       >

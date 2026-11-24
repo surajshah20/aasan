@@ -35,14 +35,29 @@ const StadiumCameraRig: React.FC<{
   targetLookAt: [number, number, number];
   fov: number;
   drillLevel: StadiumDrillLevel;
+  instant?: boolean;
   onArrival?: () => void;
-}> = ({ targetPos, targetLookAt, fov, drillLevel, onArrival }) => {
+}> = ({ targetPos, targetLookAt, fov, drillLevel, instant, onArrival }) => {
   const lookAtRef = useRef(new THREE.Vector3(...targetLookAt));
   const arrivedRef = useRef(false);
 
   useFrame((state) => {
     const targetV = new THREE.Vector3(...targetPos);
     const targetL = new THREE.Vector3(...targetLookAt);
+
+    if (instant) {
+      state.camera.position.copy(targetV);
+      lookAtRef.current.copy(targetL);
+      if (state.camera instanceof THREE.PerspectiveCamera) {
+        state.camera.fov = fov;
+        state.camera.updateProjectionMatrix();
+      }
+      state.camera.up.set(0, 1, 0);
+      if (drillLevel !== 'seat') {
+        state.camera.lookAt(targetL);
+      }
+      return;
+    }
 
     // Subtle breathing drift only in overview mode
     if (drillLevel === 'overview') {
@@ -53,13 +68,13 @@ const StadiumCameraRig: React.FC<{
     }
 
     // Smooth eased lerp (approx 1.2s transition)
-    state.camera.position.lerp(targetV, 0.065);
-    lookAtRef.current.lerp(targetL, 0.065);
+    state.camera.position.lerp(targetV, 0.075);
+    lookAtRef.current.lerp(targetL, 0.075);
 
     state.camera.up.set(0, 1, 0);
 
     if (state.camera instanceof THREE.PerspectiveCamera && Math.abs(state.camera.fov - fov) > 0.1) {
-      state.camera.fov += (fov - state.camera.fov) * 0.065;
+      state.camera.fov += (fov - state.camera.fov) * 0.075;
       state.camera.updateProjectionMatrix();
     }
 
@@ -906,7 +921,8 @@ const ProceduralStadiumDetails: React.FC<{
   isEvening: boolean;
   stadiumLevel: StadiumDrillLevel;
   showBeamAxes?: boolean;
-}> = ({ isEvening, stadiumLevel, showBeamAxes }) => {
+  isLiteMode?: boolean;
+}> = ({ isEvening, stadiumLevel, showBeamAxes, isLiteMode }) => {
   const scoreboardTex = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
@@ -1097,12 +1113,12 @@ const ProceduralStadiumDetails: React.FC<{
 
   const towers = useMemo(
     () => [
-      { id: 't-nw', pos: [-46, 0, -88] as [number, number, number], rotY: Math.PI / 4, target: [-6, 0, -10] as [number, number, number] },
-      { id: 't-ne', pos: [46, 0, -88] as [number, number, number], rotY: -Math.PI / 4, target: [6, 0, -10] as [number, number, number] },
-      { id: 't-east', pos: [88, 0, -10] as [number, number, number], rotY: -Math.PI / 2, target: [12, 0, 0] as [number, number, number] },
-      { id: 't-se', pos: [88, 0, 48] as [number, number, number], rotY: -2.40, target: [6, 0, 10] as [number, number, number] },
-      { id: 't-sw', pos: [-88, 0, 48] as [number, number, number], rotY: 2.40, target: [-6, 0, 10] as [number, number, number] },
-      { id: 't-west', pos: [-88, 0, -10] as [number, number, number], rotY: Math.PI / 2, target: [-12, 0, 0] as [number, number, number] },
+      { id: 't-nw', pos: [-46, 0, -88] as [number, number, number], target: [5, 0, -8] as [number, number, number] },
+      { id: 't-ne', pos: [46, 0, -88] as [number, number, number], target: [-5, 0, -8] as [number, number, number] },
+      { id: 't-east', pos: [88, 0, -10] as [number, number, number], target: [-6, 0, -2] as [number, number, number] },
+      { id: 't-se', pos: [88, 0, 48] as [number, number, number], target: [-5, 0, 8] as [number, number, number] },
+      { id: 't-sw', pos: [-88, 0, 48] as [number, number, number], target: [5, 0, 8] as [number, number, number] },
+      { id: 't-west', pos: [-88, 0, -10] as [number, number, number], target: [6, 0, -2] as [number, number, number] },
     ],
     []
   );
@@ -1135,6 +1151,7 @@ const ProceduralStadiumDetails: React.FC<{
           key={tower.id}
           tower={tower}
           isEvening={isEvening}
+          isLiteMode={isLiteMode}
           stadiumLevel={stadiumLevel}
           showBeamAxes={showBeamAxes}
           beamFadeTexture={beamFadeTexture}
@@ -1173,15 +1190,15 @@ const ProceduralStadiumDetails: React.FC<{
   );
 };
 
-// ─── 3b. Individual Floodlight Tower with Matching Beams & Camera-Scaled Halos ───
+// ─── 3b. Individual Floodlight Tower: Vertical Mast & Aimed Pitch-Facing Head ───
 const SingleFloodlightTower: React.FC<{
   tower: {
     id: string;
     pos: [number, number, number];
-    rotY: number;
     target: [number, number, number];
   };
   isEvening: boolean;
+  isLiteMode?: boolean;
   stadiumLevel: StadiumDrillLevel;
   showBeamAxes?: boolean;
   beamFadeTexture: THREE.Texture;
@@ -1191,6 +1208,7 @@ const SingleFloodlightTower: React.FC<{
 }> = ({
   tower,
   isEvening,
+  isLiteMode,
   stadiumLevel,
   showBeamAxes,
   beamFadeTexture,
@@ -1200,98 +1218,112 @@ const SingleFloodlightTower: React.FC<{
 }) => {
   const haloRef = useRef<THREE.Mesh>(null);
   const beamGroupRef = useRef<THREE.Group>(null);
-  const nearHazeRef = useRef<THREE.Mesh>(null);
+  const spotLightRef = useRef<THREE.SpotLight>(null);
+  const spotTargetRef = useRef<THREE.Object3D>(null);
 
-  // Exact head world coordinates
+  // Exact head world coordinates: top of mast at [tx, 49.5, tz]
   const headWorldPos = useMemo(() => {
-    const hwX = tower.pos[0] + 0.8 * Math.sin(tower.rotY);
-    const hwY = 49.5;
-    const hwZ = tower.pos[2] + 0.8 * Math.cos(tower.rotY);
-    return new THREE.Vector3(hwX, hwY, hwZ);
+    return new THREE.Vector3(tower.pos[0], 49.5, tower.pos[2]);
   }, [tower]);
 
-  // Beam orientation & distance in tower local space
-  const { beamLength, beamQuaternion } = useMemo(() => {
-    // Target relative to tower position in world coordinates
-    const dx = tower.target[0] - tower.pos[0];
-    const dz = tower.target[2] - tower.pos[2];
+  // Compute direction, distance, lookAt quaternion, and angle below horizontal
+  const { headQuaternion, beamLength, angleDeg } = useMemo(() => {
+    const localTgt = new THREE.Vector3(
+      tower.target[0] - tower.pos[0],
+      -49.5,
+      tower.target[2] - tower.pos[2]
+    );
+    const len = localTgt.length();
+    const D = Math.hypot(localTgt.x, localTgt.z);
+    const ang = (Math.atan2(49.5, D) * 180) / Math.PI;
 
-    // Convert to local tower coordinate space (un-rotate by rotY)
-    const localTgtX = dx * Math.cos(-tower.rotY) - dz * Math.sin(-tower.rotY);
-    const localTgtZ = dx * Math.sin(-tower.rotY) + dz * Math.cos(-tower.rotY);
-    const localTgtY = 0; // Ground elevation
-
-    // Vector from head [0, 49.5, 0.8] to local target [localTgtX, 0, localTgtZ]
-    const vecLocal = new THREE.Vector3(localTgtX, localTgtY - 49.5, localTgtZ - 0.8);
-    const len = vecLocal.length();
-    const dirUnit = vecLocal.clone().normalize();
-
-    // Beam geometry is oriented along -Y (downward); compute rotation quaternion
-    const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), dirUnit);
+    // Use dummy Object3D to compute exact lookAt orientation:
+    // Local +Z points toward the pitch target; panel width stays level with horizon (no roll/bank)
+    const dummy = new THREE.Object3D();
+    dummy.lookAt(localTgt);
 
     return {
+      headQuaternion: dummy.quaternion.clone(),
       beamLength: len,
-      beamQuaternion: quat,
+      angleDeg: ang,
     };
   }, [tower]);
 
-  // Log verified matching coordinates
-  useEffect(() => {
-    console.log(
-      `[Floodlight Beam Verified] Tower: ${tower.id} | Head Pos: [${headWorldPos.x.toFixed(2)}, ${headWorldPos.y.toFixed(2)}, ${headWorldPos.z.toFixed(2)}] | Cone Origin: [${headWorldPos.x.toFixed(2)}, ${headWorldPos.y.toFixed(2)}, ${headWorldPos.z.toFixed(2)}] | Matches: true | Pitch Target: [${tower.target.join(', ')}]`
-    );
-  }, [tower, headWorldPos]);
+  // Connect SpotLight to its dedicated target child object
+  useLayoutEffect(() => {
+    if (spotLightRef.current && spotTargetRef.current) {
+      spotLightRef.current.target = spotTargetRef.current;
+    }
+  }, [beamLength]);
 
-  // Per-frame distance fading & bowl culling
+  // Angle check & logging (Angles must be strictly 20° to 40° below horizontal)
+  useEffect(() => {
+    const isValid = angleDeg >= 20 && angleDeg <= 40;
+    console.log(
+      `[Floodlight Orientation Check] Tower: ${tower.id} | Head World: [${headWorldPos.x.toFixed(1)}, 49.5, ${headWorldPos.z.toFixed(1)}] | Pitch Target: [${tower.target.join(', ')}] | Angle below horizontal: ${angleDeg.toFixed(1)}° (${isValid ? 'PASS: 20°-40°' : 'FAIL: OUT OF RANGE'})`
+    );
+    if (typeof window !== 'undefined') {
+      if (!(window as any).__FLOODLIGHT_ANGLES__) (window as any).__FLOODLIGHT_ANGLES__ = {};
+      (window as any).__FLOODLIGHT_ANGLES__[tower.id] = {
+        id: tower.id,
+        head: [headWorldPos.x, 49.5, headWorldPos.z],
+        target: tower.target,
+        distance: Number(beamLength.toFixed(1)),
+        angleDeg: Number(angleDeg.toFixed(1)),
+        valid: isValid,
+      };
+    }
+  }, [tower, headWorldPos, angleDeg, beamLength]);
+
+  // Distance fading & bowl culling for beams
   useFrame(({ camera }) => {
     const camPos = camera.position;
     const distToHead = camPos.distanceTo(headWorldPos);
 
-    // Dynamic halo scaling: expands at aerial distance so lamps read vividly, scales down smoothly in close-up
     if (haloRef.current) {
       if (!isEvening) {
         haloRef.current.visible = false;
       } else {
         haloRef.current.visible = true;
-        const scaleVal = Math.min(30.0, Math.max(10.0, distToHead * 0.22));
-        haloRef.current.scale.set(scaleVal, scaleVal * 0.65, 1);
+        // Keep the glow small and bright in front of lamp face (never spreading into sky)
+        const scaleVal = Math.min(1.4, Math.max(0.9, distToHead * 0.012));
+        haloRef.current.scale.set(scaleVal, scaleVal, 1);
       }
     }
 
-    // Hide long volumetric beams when inside the stadium bowl or in seat view
     if (beamGroupRef.current) {
       const camDistToOrigin = Math.hypot(camPos.x, camPos.z);
       const isInsideBowl = (camPos.y < 22 && camDistToOrigin < 86) || stadiumLevel === 'seat';
-
-      if (!isEvening || isInsideBowl) {
-        beamGroupRef.current.visible = false;
-      } else {
-        beamGroupRef.current.visible = true;
-      }
-    }
-
-    // Faint localized haze near the lamp head stays softly visible in evening
-    if (nearHazeRef.current) {
-      nearHazeRef.current.visible = isEvening;
+      beamGroupRef.current.visible = isEvening && !isInsideBowl;
     }
   });
 
   return (
-    <group position={tower.pos} rotation={[0, tower.rotY, 0]}>
-      {/* Heavy Concrete Foundation Footing */}
+    <group position={tower.pos}>
+      {/* 1. Heavy Concrete Foundation Footing - on ground */}
       <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[2.8, 3.2, 1.8, 12]} />
         <meshStandardMaterial color="#334155" roughness={0.8} />
       </mesh>
 
-      {/* Main Steel Mast Pole */}
+      {/* 2. Main Steel Mast Pole - strictly vertical, does NOT rotate */}
       <mesh position={[0, 24, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.65, 2.1, 48, 12]} />
         <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.3} />
       </mesh>
 
-      {/* Floodlight Head Unit at [0, 49.5, 0.8] */}
-      <group position={[0, 49.5, 0.8]} rotation={[-0.48, 0, 0]}>
+      {/* 3. Mast Top Mounting Bracket (swivel base) - vertical at mast top */}
+      <mesh position={[0, 48.6, 0]}>
+        <cylinderGeometry args={[0.95, 0.75, 1.2, 10]} />
+        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, 49.3, 0]}>
+        <boxGeometry args={[1.5, 0.5, 1.5]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
+      </mesh>
+
+      {/* 4. Floodlight Head Unit at [0, 49.5, 0] - ONLY the head is rotated toward pitch target */}
+      <group position={[0, 49.5, 0]} quaternion={headQuaternion}>
         {/* Dark Graphite Housing Frame */}
         <mesh position={[0, 0, 0]} castShadow>
           <boxGeometry args={[9.6, 5.6, 0.8]} />
@@ -1299,7 +1331,7 @@ const SingleFloodlightTower: React.FC<{
         </mesh>
 
         {/* Top Anti-Glare Visor */}
-        <mesh position={[0, 2.9, 0.35]} rotation={[-0.25, 0, 0]}>
+        <mesh position={[0, 2.85, 0.35]} rotation={[0.20, 0, 0]}>
           <boxGeometry args={[9.8, 0.15, 0.8]} />
           <meshStandardMaterial color="#080c14" metalness={0.7} roughness={0.4} />
         </mesh>
@@ -1322,7 +1354,7 @@ const SingleFloodlightTower: React.FC<{
           <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} wireframe />
         </mesh>
 
-        {/* Dense Panel Face with 60 Emissive Lamp Cells (10 cols x 6 rows) */}
+        {/* Dense Panel Face with 60 Emissive Lamp Cells (10 cols x 6 rows) pointing down along +Z */}
         <mesh position={[0, 0, 0.41]}>
           <planeGeometry args={[9.2, 5.2]} />
           <meshStandardMaterial
@@ -1336,7 +1368,7 @@ const SingleFloodlightTower: React.FC<{
           />
         </mesh>
 
-        {/* 3D Micro-Lens Bulbs Array (60 physical lamp elements for close-up depth) */}
+        {/* 3D Micro-Lens Bulbs Array (60 physical lamp elements) */}
         {[-4.05, -3.15, -2.25, -1.35, -0.45, 0.45, 1.35, 2.25, 3.15, 4.05].map((bx, bi) =>
           [-2.0, -1.2, -0.4, 0.4, 1.2, 2.0].map((by, ri) => (
             <mesh
@@ -1356,88 +1388,100 @@ const SingleFloodlightTower: React.FC<{
           ))
         )}
 
-        {/* Bright Additive Halo Sprite scaling with camera distance */}
-        <mesh ref={haloRef} position={[0, 0, 1.05]}>
-          <planeGeometry args={[1, 1]} />
+        {/* Halo Glow Sprite sits tightly in front of lamp face, pointing where lamp points (no sky spread) */}
+        <mesh ref={haloRef} position={[0, 0, 0.52]}>
+          <planeGeometry args={[10.5, 6.2]} />
           <meshBasicMaterial
             map={haloTexture}
             color="#fffdf2"
             transparent
-            opacity={0.75}
+            opacity={0.85}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
           />
         </mesh>
 
-        {/* Faint localized haze right at lamp head */}
-        <mesh ref={nearHazeRef} position={[0, 0, 1.1]}>
-          <planeGeometry args={[14.0, 9.0]} />
-          <meshBasicMaterial
-            map={haloTexture}
-            color="#fffbeb"
-            transparent
-            opacity={0.14}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
-        </mesh>
-
-        {/* Subtle Horizontal Flare Streak */}
+        {/* Subtle Horizontal Flare Streak in front of lamp face */}
         {isEvening && (
-          <mesh position={[0, 0, 1.15]}>
-            <planeGeometry args={[26.0, 1.2]} />
+          <mesh position={[0, 0, 0.54]}>
+            <planeGeometry args={[16.0, 1.2]} />
             <meshBasicMaterial
               map={streakTexture}
               color="#fffbeb"
               transparent
-              opacity={0.32}
+              opacity={0.28}
               blending={THREE.AdditiveBlending}
               depthWrite={false}
             />
           </mesh>
         )}
-      </group>
 
-      {/* Volumetric Beam Group: Child of the tower, originates exactly at head [0, 49.5, 0.8] */}
-      <group position={[0, 49.5, 0.8]} quaternion={beamQuaternion}>
-        <group ref={beamGroupRef}>
-          {/* Soft 32-segment tapered cone: top radius 0.8m at head, expands to 20m at pitch */}
-          <mesh position={[0, -beamLength / 2, 0]}>
-            <cylinderGeometry args={[0.8, 20.0, beamLength, 32, 8, true]} />
-            <meshBasicMaterial
-              map={beamFadeTexture}
-              color="#fffcf0"
-              transparent
-              opacity={0.12}
-              blending={THREE.AdditiveBlending}
-              side={THREE.DoubleSide}
-              depthWrite={false}
-            />
-          </mesh>
+        {/* Dedicated target object for SpotLight at exact pitch target distance */}
+        <object3D ref={spotTargetRef} position={[0, 0, beamLength]} />
 
-          {/* Tri-plane cross billboards for soft volumetric appearance from every angle */}
-          {[0, Math.PI / 3, (2 * Math.PI) / 3].map((rotAngle, idx) => (
-            <mesh key={`cross-quad-${idx}`} position={[0, -beamLength / 2, 0]} rotation={[0, rotAngle, 0]}>
-              <planeGeometry args={[18.0, beamLength]} />
+        {/* Real SpotLight parented directly to the head, targeting the exact pitch target */}
+        <spotLight
+          ref={spotLightRef}
+          position={[0, 0, 0.45]}
+          intensity={isEvening ? 7.5 : 0}
+          color="#fffdf4"
+          angle={Math.PI / 4.2}
+          penumbra={0.82}
+          distance={beamLength + 25}
+          decay={1.0}
+          castShadow={!isLiteMode && (tower.id.includes('nw') || tower.id.includes('se'))}
+          shadow-mapSize={[1024, 1024]}
+          shadow-bias={-0.0004}
+        />
+
+        {/* Volumetric Light Beam: Child of the head, starts at z=0.41 and expands to z=beamLength */}
+        <group position={[0, 0, 0.41]}>
+          <group ref={beamGroupRef}>
+            <mesh position={[0, 0, (beamLength - 0.41) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.8, 18.0, beamLength - 0.41, 32, 8, true]} />
               <meshBasicMaterial
                 map={beamFadeTexture}
                 color="#fffcf0"
                 transparent
-                opacity={0.10}
+                opacity={0.12}
                 blending={THREE.AdditiveBlending}
                 side={THREE.DoubleSide}
                 depthWrite={false}
               />
             </mesh>
-          ))}
+
+            {/* Tri-plane cross billboards */}
+            {[0, Math.PI / 3, (2 * Math.PI) / 3].map((rotAngle, idx) => (
+              <mesh key={`cross-quad-${idx}`} position={[0, 0, (beamLength - 0.41) / 2]} rotation={[0, 0, rotAngle]}>
+                <planeGeometry args={[16.0, beamLength - 0.41]} />
+                <meshBasicMaterial
+                  map={beamFadeTexture}
+                  color="#fffcf0"
+                  transparent
+                  opacity={0.10}
+                  blending={THREE.AdditiveBlending}
+                  side={THREE.DoubleSide}
+                  depthWrite={false}
+                />
+              </mesh>
+            ))}
+          </group>
         </group>
 
-        {/* Debug Beam Axis Line/Cylinder (enabled via debug toggle) */}
+        {/* Debug Axis Line and Target Disc on Pitch (enabled via ?debug=1 or toggle button) */}
         {showBeamAxes && (
-          <mesh position={[0, -beamLength / 2, 0]}>
-            <cylinderGeometry args={[0.08, 0.08, beamLength, 8]} />
-            <meshBasicMaterial color="#38bdf8" />
-          </mesh>
+          <group>
+            {/* Axis cylinder from head to pitch target */}
+            <mesh position={[0, 0, beamLength / 2]} rotation={[-Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.10, 0.10, beamLength, 8]} />
+              <meshBasicMaterial color="#38bdf8" />
+            </mesh>
+            {/* Target disc on pitch */}
+            <mesh position={[0, 0, beamLength]}>
+              <ringGeometry args={[0.8, 1.4, 24]} />
+              <meshBasicMaterial color="#38bdf8" side={THREE.DoubleSide} />
+            </mesh>
+          </group>
         )}
       </group>
     </group>
@@ -1853,80 +1897,6 @@ const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = (
             intensity={0.85}
             color="#ffedd5"
           />
-
-          {/* 6 High-Power Real SpotLights from ALL 6 Floodlight Towers targeting the Pitch */}
-          {/* North-West Tower */}
-          <spotLight
-            position={[-46, 50, -88]}
-            target={pitchTarget}
-            intensity={7.5}
-            color="#fffdf4"
-            angle={Math.PI / 4.0}
-            penumbra={0.82}
-            distance={220}
-            decay={1.0}
-            castShadow={!isLiteMode}
-            shadow-mapSize={[1024, 1024]}
-            shadow-bias={-0.0004}
-          />
-          {/* North-East Tower */}
-          <spotLight
-            position={[46, 50, -88]}
-            target={pitchTarget}
-            intensity={7.5}
-            color="#fffdf4"
-            angle={Math.PI / 4.0}
-            penumbra={0.82}
-            distance={220}
-            decay={1.0}
-          />
-          {/* East Tower */}
-          <spotLight
-            position={[88, 50, -10]}
-            target={pitchTarget}
-            intensity={7.5}
-            color="#fffdf4"
-            angle={Math.PI / 4.0}
-            penumbra={0.82}
-            distance={220}
-            decay={1.0}
-          />
-          {/* South-East Tower */}
-          <spotLight
-            position={[88, 50, 48]}
-            target={pitchTarget}
-            intensity={7.0}
-            color="#fffdf4"
-            angle={Math.PI / 4.0}
-            penumbra={0.82}
-            distance={220}
-            decay={1.0}
-            castShadow={!isLiteMode}
-            shadow-mapSize={[1024, 1024]}
-            shadow-bias={-0.0004}
-          />
-          {/* South-West Tower */}
-          <spotLight
-            position={[-88, 50, 48]}
-            target={pitchTarget}
-            intensity={7.0}
-            color="#fffdf4"
-            angle={Math.PI / 4.0}
-            penumbra={0.82}
-            distance={220}
-            decay={1.0}
-          />
-          {/* West Tower */}
-          <spotLight
-            position={[-88, 50, -10]}
-            target={pitchTarget}
-            intensity={7.5}
-            color="#fffdf4"
-            angle={Math.PI / 4.0}
-            penumbra={0.82}
-            distance={220}
-            decay={1.0}
-          />
         </>
       ) : (
         <>
@@ -1986,11 +1956,27 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
   const [hoveredSeat, setHoveredSeat] = useState<StadiumSeatInstance | null>(null);
   const [lightingMode, setLightingMode] = useState<'evening' | 'day'>('evening');
-  const [showBeamAxes, setShowBeamAxes] = useState(false);
+  const [showBeamAxes, setShowBeamAxes] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      return p.get('debug') === '1';
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('debug') === '1') {
+        setShowBeamAxes(true);
+      }
+    }
+  }, []);
   const [customCamera, setCustomCamera] = useState<{
     pos: [number, number, number];
     lookAt: [number, number, number];
     fov: number;
+    instant?: boolean;
   } | null>(null);
 
   // Filter state
@@ -2248,7 +2234,8 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
           targetPos={targetPos}
           targetLookAt={targetLookAt}
           fov={targetFov}
-          drillLevel={stadiumLevel}
+          drillLevel={customCamera ? 'stand' : stadiumLevel}
+          instant={customCamera?.instant}
           onArrival={() => {
             if (stadiumLevel === 'seat' && activeSeat && cameraMode === 'flying') {
               setCameraMode('seatview');
@@ -2283,6 +2270,7 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
           isEvening={isEvening}
           stadiumLevel={stadiumLevel}
           showBeamAxes={showBeamAxes}
+          isLiteMode={isLiteMode}
         />
 
         {/* 4. Crowd Spectators on Sold Seats */}

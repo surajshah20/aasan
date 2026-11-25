@@ -1637,17 +1637,21 @@ const ProceduralStadiumDetails: React.FC<{
           <boxGeometry args={[6.0, 3.2, 6.0]} />
           <meshStandardMaterial color={isEvening ? "#334155" : "#78828e"} roughness={0.8} />
         </mesh>
-        {/* Dual Steel Lattice Support Pylons */}
+        {/* Dual Galvanized Steel Lattice Support Pylons */}
         {[-3.6, 3.6].map((px, idx) => (
           <mesh key={`pylon-${idx}`} position={[px, -8.5, 0]}>
             <cylinderGeometry args={[0.45, 0.60, 15.0, 8]} />
-            <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.3} />
+            <meshStandardMaterial
+              color={isEvening ? "#475569" : "#9ea5ad"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.3 : 0.45}
+            />
           </mesh>
         ))}
         {/* Scoreboard Housing: 14.2 * 1.4 = 19.9, 7.4 * 1.4 = 10.4 */}
         <mesh position={[0, 0, 0]} castShadow>
           <boxGeometry args={[20.0, 10.4, 0.9]} />
-          <meshStandardMaterial color="#0b0f19" metalness={0.7} roughness={0.4} />
+          <meshStandardMaterial color={isEvening ? "#0b0f19" : "#343d48"} metalness={0.7} roughness={0.4} />
         </mesh>
         {/* Electronic Display Face: 13.6 * 1.4 = 19.0, 6.8 * 1.4 = 9.5 */}
         <mesh position={[0, 0, 0.48]}>
@@ -1766,103 +1770,343 @@ const SingleFloodlightTower: React.FC<{
     }
   });
 
+  // Compute outward yaw angle (away from stadium center) for ladder & base cabinet orientation
+  const outwardAngle = useMemo(() => {
+    return Math.atan2(tower.pos[2], tower.pos[0]);
+  }, [tower.pos]);
+
   return (
     <group position={tower.pos}>
       {/* 1. Heavy Concrete Foundation Footing - on ground */}
       <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[2.8, 3.2, 1.8, 12]} />
+        <cylinderGeometry args={[2.8, 3.2, 1.8, 16]} />
         <meshStandardMaterial color={isEvening ? "#334155" : "#78828e"} roughness={0.8} />
       </mesh>
 
-      {/* 2. Main Steel Mast Pole - strictly vertical, terminates cleanly at y=45.0m below the head */}
-      <mesh position={[0, 22.5, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.65, 2.1, 45.0, 12]} />
-        <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.3} />
+      {/* Base Steel Flange Plate & Anchor Bolts */}
+      <mesh position={[0, 1.88, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[2.25, 2.35, 0.16, 16]} />
+        <meshStandardMaterial
+          color={isEvening ? "#475569" : "#9ea5ad"}
+          metalness={isEvening ? 0.85 : 0.50}
+          roughness={isEvening ? 0.30 : 0.45}
+        />
+      </mesh>
+      {/* Radial Anchor Bolt Studs with Hex Nuts */}
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((bi) => {
+        const theta = (bi * Math.PI) / 6;
+        const bx = Math.cos(theta) * 2.05;
+        const bz = Math.sin(theta) * 2.05;
+        return (
+          <mesh key={`anchor-bolt-${bi}`} position={[bx, 2.02, bz]}>
+            <cylinderGeometry args={[0.065, 0.065, 0.16, 6]} />
+            <meshStandardMaterial
+              color={isEvening ? "#334155" : "#7c858e"}
+              metalness={0.7}
+              roughness={0.4}
+            />
+          </mesh>
+        );
+      })}
+
+      {/* 2. Main Galvanized Tapered Steel Mast Pole (1.75m at base -> 0.65m at top) */}
+      <mesh position={[0, 23.48, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.65, 1.75, 43.04, 20]} />
+        <meshStandardMaterial
+          color={isEvening ? "#475569" : "#9ea5ad"}
+          metalness={isEvening ? 0.85 : 0.50}
+          roughness={isEvening ? 0.30 : 0.45}
+        />
       </mesh>
 
-      {/* 3. Mast Top Platform Collar & Maintenance Railing */}
+      {/* 4 Horizontal Splice Joint Bands (Flange Rings) */}
+      {[
+        { y: 12.5, r: 1.56, h: 0.28 },
+        { y: 23.0, r: 1.29, h: 0.26 },
+        { y: 33.5, r: 1.02, h: 0.24 },
+        { y: 42.0, r: 0.80, h: 0.22 },
+      ].map((splice, idx) => (
+        <mesh key={`splice-${idx}`} position={[0, splice.y, 0]}>
+          <cylinderGeometry args={[splice.r, splice.r, splice.h, 20]} />
+          <meshStandardMaterial
+            color={isEvening ? "#3e4c5e" : "#8d949c"}
+            metalness={isEvening ? 0.85 : 0.50}
+            roughness={isEvening ? 0.30 : 0.45}
+          />
+        </mesh>
+      ))}
+
+      {/* 3. Mid-Mast Maintenance Platform (~2/3 height at y=29.5m) */}
+      <group position={[0, 29.5, 0]}>
+        {/* Support gusset brackets underneath */}
+        {[0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].map((rot, idx) => (
+          <mesh
+            key={`plat-gusset-${idx}`}
+            position={[Math.cos(rot) * 1.45, -0.4, Math.sin(rot) * 1.45]}
+            rotation={[0, -rot, 0.45]}
+          >
+            <boxGeometry args={[0.08, 0.9, 0.22]} />
+            <meshStandardMaterial
+              color={isEvening ? "#334155" : "#8a9198"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
+          </mesh>
+        ))}
+        {/* Platform floor disc */}
+        <mesh position={[0, 0, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[2.1, 2.1, 0.12, 16]} />
+          <meshStandardMaterial
+            color={isEvening ? "#2a374a" : "#9ea5ad"}
+            metalness={isEvening ? 0.85 : 0.50}
+            roughness={isEvening ? 0.30 : 0.45}
+          />
+        </mesh>
+        {/* Safety Railing Handrails */}
+        <mesh position={[0, 1.0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[2.08, 0.035, 8, 24]} />
+          <meshStandardMaterial
+            color={isEvening ? "#475569" : "#a6aeb6"}
+            metalness={isEvening ? 0.85 : 0.50}
+            roughness={isEvening ? 0.30 : 0.45}
+          />
+        </mesh>
+        <mesh position={[0, 0.52, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[2.08, 0.025, 8, 24]} />
+          <meshStandardMaterial
+            color={isEvening ? "#475569" : "#a6aeb6"}
+            metalness={isEvening ? 0.85 : 0.50}
+            roughness={isEvening ? 0.30 : 0.45}
+          />
+        </mesh>
+        {/* Railing Vertical Stanchions */}
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((si) => {
+          const sRad = (si * Math.PI) / 4;
+          return (
+            <mesh
+              key={`stanchion-${si}`}
+              position={[Math.cos(sRad) * 2.06, 0.5, Math.sin(sRad) * 2.06]}
+            >
+              <cylinderGeometry args={[0.025, 0.025, 1.0, 6]} />
+              <meshStandardMaterial
+                color={isEvening ? "#475569" : "#a6aeb6"}
+                metalness={isEvening ? 0.85 : 0.50}
+                roughness={isEvening ? 0.30 : 0.45}
+              />
+            </mesh>
+          );
+        })}
+      </group>
+
+      {/* 4. Rear Thin Access Ladder & Cable Conduit Run down the back of the mast */}
+      <group rotation={[0, -outwardAngle, 0]}>
+        {/* Vertical ladder stringer rails (slanted with mast taper: bottom r=1.92m, top r=0.82m) */}
+        {[-0.22, 0.22].map((railZ, ridx) => {
+          // Average position and slant angle for 43m run
+          const dx = 0.82 - 1.92;
+          const dy = 43.0;
+          const slantAngle = Math.atan2(dx, dy);
+          return (
+            <mesh
+              key={`ladder-rail-${ridx}`}
+              position={[1.37, 23.5, railZ]}
+              rotation={[0, 0, -slantAngle]}
+            >
+              <boxGeometry args={[0.045, 43.0, 0.045]} />
+              <meshStandardMaterial
+                color={isEvening ? "#475569" : "#9aa2aa"}
+                metalness={isEvening ? 0.85 : 0.50}
+                roughness={isEvening ? 0.30 : 0.45}
+              />
+            </mesh>
+          );
+        })}
+
+        {/* Stand-off mounting brackets connecting ladder to mast every 4m */}
+        {[4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44].map((by) => {
+          const t = (by - 2.0) / 43.0;
+          const rMast = 1.75 - t * (1.75 - 0.65);
+          const rLad = 1.92 - t * (1.92 - 0.82);
+          const wBracket = rLad - rMast;
+          return (
+            <mesh key={`bracket-${by}`} position={[rMast + wBracket / 2, by, 0]}>
+              <boxGeometry args={[wBracket, 0.04, 0.48]} />
+              <meshStandardMaterial
+                color={isEvening ? "#3e4c5e" : "#8d949c"}
+                metalness={isEvening ? 0.85 : 0.50}
+                roughness={isEvening ? 0.30 : 0.45}
+              />
+            </mesh>
+          );
+        })}
+
+        {/* Cable Tray Conduit Run running down the mast */}
+        <mesh position={[1.42, 23.5, 0.38]} rotation={[0, 0, Math.atan2(1.1, 43.0)]}>
+          <boxGeometry args={[0.08, 43.0, 0.06]} />
+          <meshStandardMaterial
+            color={isEvening ? "#334155" : "#7c848e"}
+            metalness={0.6}
+            roughness={0.4}
+          />
+        </mesh>
+
+        {/* Weatherproof Base Equipment / Junction Cabinet at Base Footing */}
+        <group position={[1.95, 2.45, 0.85]}>
+          {/* Cabinet mount pad */}
+          <mesh position={[0, -0.65, 0]}>
+            <boxGeometry args={[1.2, 0.12, 0.75]} />
+            <meshStandardMaterial color={isEvening ? "#334155" : "#78828e"} roughness={0.8} />
+          </mesh>
+          {/* Steel enclosure cabinet */}
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[1.1, 1.45, 0.65]} />
+            <meshStandardMaterial
+              color={isEvening ? "#334155" : "#8a9198"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
+          </mesh>
+          {/* Cabinet door recessed seam */}
+          <mesh position={[0.56, 0, 0]}>
+            <planeGeometry args={[0.55, 1.35]} />
+            <meshStandardMaterial color={isEvening ? "#1e293b" : "#767d84"} roughness={0.5} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* 5. Mast Top Platform Collar & Maintenance Railing */}
       <mesh position={[0, 45.2, 0]}>
-        <cylinderGeometry args={[1.05, 0.72, 0.5, 12]} />
-        <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+        <cylinderGeometry args={[1.05, 0.72, 0.5, 16]} />
+        <meshStandardMaterial
+          color={isEvening ? "#334155" : "#9ea5ad"}
+          metalness={isEvening ? 0.85 : 0.50}
+          roughness={isEvening ? 0.30 : 0.45}
+        />
       </mesh>
       <mesh position={[0, 45.5, 0]}>
-        <cylinderGeometry args={[1.5, 1.5, 0.15, 12]} />
-        <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
+        <cylinderGeometry args={[1.5, 1.5, 0.15, 16]} />
+        <meshStandardMaterial
+          color={isEvening ? "#1e293b" : "#8e969e"}
+          metalness={isEvening ? 0.85 : 0.50}
+          roughness={isEvening ? 0.30 : 0.45}
+        />
       </mesh>
       <mesh position={[0, 46.0, 0]}>
-        <cylinderGeometry args={[1.45, 1.45, 0.9, 12, 1, true]} />
-        <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} wireframe />
+        <cylinderGeometry args={[1.45, 1.45, 0.9, 16, 1, true]} />
+        <meshStandardMaterial
+          color={isEvening ? "#475569" : "#a6aeb6"}
+          metalness={isEvening ? 0.85 : 0.50}
+          roughness={isEvening ? 0.30 : 0.45}
+          wireframe
+        />
       </mesh>
 
-      {/* 4. Swivel Mounting Yoke & Forward Cantilevered Floodlight Head Unit at [0, 46.2, 0] */}
+      {/* 6. Swivel Mounting Yoke & Forward Cantilevered Floodlight Head Unit at [0, 46.2, 0] */}
       <group position={[0, 46.2, 0]} quaternion={headQuaternion}>
-        {/* Cantilever Bracket / Yoke */}
+        {/* Cantilever Bracket / Yoke (Galvanized / Mid-Grey in Day) */}
         <group>
           <mesh position={[0, -0.3, 0]}>
-            <cylinderGeometry args={[0.65, 0.65, 0.8, 8]} />
-            <meshStandardMaterial color="#334155" metalness={0.85} roughness={0.3} />
+            <cylinderGeometry args={[0.65, 0.65, 0.8, 12]} />
+            <meshStandardMaterial
+              color={isEvening ? "#334155" : "#9ea5ad"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
           </mesh>
           <mesh position={[-1.6, 0.5, 0.9]} rotation={[0.48, -0.12, 0]}>
             <boxGeometry args={[0.3, 0.35, 2.2]} />
-            <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
+            <meshStandardMaterial
+              color={isEvening ? "#1e293b" : "#9ea5ad"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
           </mesh>
           <mesh position={[1.6, 0.5, 0.9]} rotation={[0.48, 0.12, 0]}>
             <boxGeometry args={[0.3, 0.35, 2.2]} />
-            <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
+            <meshStandardMaterial
+              color={isEvening ? "#1e293b" : "#9ea5ad"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
           </mesh>
           <mesh position={[0, 1.0, 1.75]}>
             <boxGeometry args={[5.2, 0.4, 0.4]} />
-            <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
+            <meshStandardMaterial
+              color={isEvening ? "#1e293b" : "#9ea5ad"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
           </mesh>
         </group>
 
         {/* ─── HEAD ASSEMBLY (Forward-offset at z=2.1m, y=1.0m, facing pitch along +Z) ─── */}
 
-        {/* Dark Graphite Housing Frame */}
+        {/* Mid-Grey Metal Housing Frame (Lighter than mast) */}
         <mesh position={[0, 1.0, 2.1]} castShadow>
           <boxGeometry args={[9.6, 5.6, 0.6]} />
-          <meshStandardMaterial color="#0b0f19" metalness={0.85} roughness={0.3} />
+          <meshStandardMaterial
+            color={isEvening ? "#0b0f19" : "#b0b8c0"}
+            metalness={isEvening ? 0.85 : 0.52}
+            roughness={isEvening ? 0.30 : 0.42}
+          />
         </mesh>
 
-        {/* Top Anti-Glare Visor */}
+        {/* Slim Anti-Glare Visor on Top */}
         <mesh position={[0, 3.82, 2.55]} rotation={[0.22, 0, 0]}>
           <boxGeometry args={[9.8, 0.12, 0.45]} />
-          <meshStandardMaterial color="#080c14" metalness={0.7} roughness={0.4} />
+          <meshStandardMaterial
+            color={isEvening ? "#080c14" : "#8e969e"}
+            metalness={isEvening ? 0.70 : 0.50}
+            roughness={isEvening ? 0.40 : 0.45}
+          />
         </mesh>
 
         {/* Side Visor Flaps */}
         {[-4.85, 4.85].map((sx, idx) => (
           <mesh key={`side-visor-${idx}`} position={[sx, 1.0, 2.45]}>
             <boxGeometry args={[0.12, 5.6, 0.35]} />
-            <meshStandardMaterial color="#080c14" metalness={0.7} roughness={0.4} />
+            <meshStandardMaterial
+              color={isEvening ? "#080c14" : "#8e969e"}
+              metalness={isEvening ? 0.70 : 0.50}
+              roughness={isEvening ? 0.40 : 0.45}
+            />
           </mesh>
         ))}
 
         {/* Rear Maintenance Catwalk & Safety Lattice */}
         <mesh position={[0, -1.4, 1.3]}>
           <boxGeometry args={[8.8, 0.2, 1.0]} />
-          <meshStandardMaterial color="#334155" metalness={0.8} roughness={0.3} />
+          <meshStandardMaterial
+            color={isEvening ? "#334155" : "#9ea5ad"}
+            metalness={isEvening ? 0.85 : 0.50}
+            roughness={isEvening ? 0.30 : 0.45}
+          />
         </mesh>
         <mesh position={[0, -0.8, 0.8]}>
           <boxGeometry args={[8.8, 1.0, 0.08]} />
-          <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} wireframe />
-        </mesh>
-
-        {/* Dense Front Panel Face with Dark Graphite Base */}
-        <mesh position={[0, 1.0, 2.41]}>
-          <planeGeometry args={[9.2, 5.2]} />
           <meshStandardMaterial
-            color="#ffffff"
-            map={lampFaceTexture}
-            emissive={isEvening ? '#fffde8' : '#000000'}
-            emissiveMap={lampFaceTexture}
-            emissiveIntensity={isEvening ? 1.5 : 0.0}
-            roughness={0.25}
-            metalness={0.7}
+            color={isEvening ? "#475569" : "#a6aeb6"}
+            metalness={isEvening ? 0.85 : 0.50}
+            roughness={isEvening ? 0.30 : 0.45}
+            wireframe
           />
         </mesh>
 
-        {/* 60 High-Intensity Micro-Lens Emissive LED Points (Triggers bloom and realistic camera point flare) */}
+        {/* Dark Reflector Panel Face Behind Lenses */}
+        <mesh position={[0, 1.0, 2.41]}>
+          <planeGeometry args={[9.2, 5.2]} />
+          <meshStandardMaterial
+            color={isEvening ? "#ffffff" : "#1a2028"}
+            map={isEvening ? lampFaceTexture : undefined}
+            emissive={isEvening ? "#fffde8" : "#000000"}
+            emissiveMap={isEvening ? lampFaceTexture : undefined}
+            emissiveIntensity={isEvening ? 1.5 : 0.0}
+            roughness={isEvening ? 0.25 : 0.45}
+            metalness={isEvening ? 0.70 : 0.55}
+          />
+        </mesh>
+
+        {/* 60 Micro-Lenses: Pale Glass with slight blue tint in Day Mode, High-Intensity Emissive in Night Mode */}
         {[-4.05, -3.15, -2.25, -1.35, -0.45, 0.45, 1.35, 2.25, 3.15, 4.05].map((bx, bi) =>
           [-2.0, -1.2, -0.4, 0.4, 1.2, 2.0].map((by, ri) => (
             <mesh
@@ -1872,11 +2116,11 @@ const SingleFloodlightTower: React.FC<{
             >
               <cylinderGeometry args={[0.32, 0.38, 0.08, 10]} />
               <meshStandardMaterial
-                color={isEvening ? '#ffffff' : '#334155'}
-                emissive={isEvening ? '#ffffff' : '#000000'}
+                color={isEvening ? "#ffffff" : "#d8e4eb"}
+                emissive={isEvening ? "#ffffff" : "#000000"}
                 emissiveIntensity={isEvening ? 3.2 : 0.0}
-                roughness={0.08}
-                metalness={isEvening ? 0.2 : 0.8}
+                roughness={isEvening ? 0.08 : 0.15}
+                metalness={isEvening ? 0.20 : 0.42}
               />
             </mesh>
           ))

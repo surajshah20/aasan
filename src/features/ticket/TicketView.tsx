@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 import { useBookingStore } from '../../store/useBookingStore';
 import { useT } from '../../i18n/useT';
@@ -8,7 +8,9 @@ import venuesData from '../../data/venues.json';
 import eventsData from '../../data/events.json';
 import { Venue, EventItem, SelectedSeat } from '../../types';
 import { 
-  Download, 
+  FileText,
+  Image,
+  Download,
   Calendar, 
   MapPin, 
   Copy, 
@@ -19,13 +21,19 @@ import {
   ShieldAlert,
   ArrowLeft
 } from 'lucide-react';
+import { 
+  generateTicketPDF, 
+  generateTicketPNGs, 
+  createSingleTicketCanvas, 
+  TicketGenData, 
+  ProcessedSeatItem 
+} from './ticketGenerator';
 
 export const TicketView: React.FC = () => {
   const { t, language } = useT();
   const { bookingResult, resetAll, setView } = useBookingStore();
   const [copied, setCopied] = useState(false);
   const [activeCarouselIdx, setActiveCarouselIdx] = useState(0);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   const venues = venuesData as unknown as Venue[];
   const events = eventsData as unknown as EventItem[];
@@ -98,14 +106,13 @@ export const TicketView: React.FC = () => {
       };
     }
     // Cinema: Hall and chain
-    const chain = venue?.chain || 'QFX';
+    const chain = venue?.chain || 'QFX Cinemas';
     let rawVenueName = venue?.name?.[language] || venue?.name?.en || 'QFX Cinemas — Civil Mall';
-    // Strip trailing parentheses like "(Audi 1)" if already in name
-    rawVenueName = rawVenueName.replace(/\s*\([^)]*Audi[^)]*\)/gi, '').trim();
-    const displayName = rawVenueName.toLowerCase().startsWith(chain.toLowerCase())
+    rawVenueName = rawVenueName.replace(/\s*\([^)]*Audi[^)]*\)/gi, '').replace(/\s*\([^)]*अडी[^)]*\)/gi, '').trim();
+    const displayName = (rawVenueName.startsWith('QFX') || rawVenueName.toLowerCase().startsWith(chain.toLowerCase()))
       ? rawVenueName
       : `${chain} — ${rawVenueName}`;
-    const hallName = event?.hallName ? event.hallName.split('(')[0].trim() : 'Audi 1';
+    const hallName = event?.hallName ? event.hallName.split('(')[0].trim() : (language === 'ne' ? 'अडी १' : 'Audi 1');
     return {
       venueHeadline: `${displayName} (${hallName})`,
       venueSubline: venue?.location || `${venue?.city || 'Kathmandu'}, Nepal`,
@@ -115,20 +122,24 @@ export const TicketView: React.FC = () => {
   // Seats with exact standard formatting:
   // Stadium: "<Stand/Tier> · Block <id> · Row <letter> · Seat <number>" (e.g. "Grand Pavilion — Lower · Block P1 · Row A · Seat 1")
   // Cinema: "Audi 1 · Row <letter> · Seat <number>" (e.g. "Audi 1 · Row K · Seat 6")
-  const processedSeats = useMemo(() => {
+  const processedSeats = useMemo<ProcessedSeatItem[]>(() => {
     if (!booking?.seats) return [];
     const isCinema = venue?.type === 'cinema';
     const cinemaHall = event?.hallName ? event.hallName.split('(')[0].trim() : 'Audi 1';
 
     return booking.seats.map((seat: SelectedSeat) => {
       if (isCinema) {
+        const fullLabel = `${cinemaHall} · Row ${seat.row} · Seat ${seat.number}`;
         return {
           ...seat,
+          standName: cinemaHall,
+          blockLabel: cinemaHall,
           groupKey: cinemaHall,
           groupTitle: cinemaHall,
-          fullLabel: `${cinemaHall} · Row ${seat.row} · Seat ${seat.number}`,
+          fullLabel,
           shortSeat: `Row ${seat.row} · Seat ${seat.number}`,
-          qrData: `AASAN-DEMO:${booking.id}:${venue.id}:${cinemaHall}:Row${seat.row}:Seat${seat.number}`,
+          gateOrStand: cinemaHall,
+          qrData: `${booking.id} · ${fullLabel}`,
         };
       }
 
@@ -152,6 +163,7 @@ export const TicketView: React.FC = () => {
       const groupKey = `${stand} · ${block}`;
       const fullLabel = `${stand} · ${block} · Row ${seat.row} · Seat ${seat.number}`;
       const shortSeat = `Row ${seat.row} · Seat ${seat.number}`;
+      const gateOrStand = block.toUpperCase();
 
       return {
         ...seat,
@@ -161,7 +173,8 @@ export const TicketView: React.FC = () => {
         groupTitle: groupKey,
         fullLabel,
         shortSeat,
-        qrData: `AASAN-DEMO:${booking.id}:${venue.id}:${stand}:${block}:Row${seat.row}:Seat${seat.number}`,
+        gateOrStand,
+        qrData: `${booking.id} · ${fullLabel}`,
       };
     });
   }, [booking, venue, event]);
@@ -192,242 +205,64 @@ export const TicketView: React.FC = () => {
     }
   };
 
-  // High-Resolution Saved Ticket Image Generator
-  const handleSaveTicketImage = async () => {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const ticketData: TicketGenData = useMemo(() => ({
+    booking: booking!,
+    venue,
+    event,
+    seats: processedSeats,
+    language,
+    formattedPaymentMethod,
+    formattedDateTime,
+    venueHeadline,
+    venueSubline,
+  }), [booking, venue, event, processedSeats, language, formattedPaymentMethod, formattedDateTime, venueHeadline, venueSubline]);
+
+  const handleDownloadPDF = async () => {
     if (!booking) return;
-    setIsGeneratingImage(true);
-
+    setIsGenerating(true);
     try {
-      const width = 1200;
-      const seatCount = processedSeats.length;
-      // Dynamic height based on seat QR count
-      const qrRows = Math.ceil(seatCount / 2);
-      const height = Math.max(1400, 1050 + qrRows * 280);
-
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      // Dark Luxury Background
-      const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
-      bgGrad.addColorStop(0.00, '#151824');
-      bgGrad.addColorStop(0.40, '#0f111a');
-      bgGrad.addColorStop(1.00, '#0a0b10');
-      ctx.fillStyle = bgGrad;
-      ctx.fillRect(0, 0, width, height);
-
-      // Requirement 7: Solid Crimson 3px Line at the top
-      ctx.fillStyle = '#dc143c';
-      ctx.fillRect(0, 0, width, 6); // 6px on 1200w canvas = 3px effective
-
-      // Header Brand
-      ctx.fillStyle = '#dc143c';
-      ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
-      ctx.fillText('AASAN (आसन)', 60, 68);
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '600 18px system-ui, -apple-system, sans-serif';
-      ctx.fillText('• 3D SEAT PREVIEW & TICKETING NEPAL', 315, 68);
-
-      // Booking ID Pill on top-right (monospace, single pill, no wrap)
-      const bookingPillText = booking.id;
-      ctx.font = 'bold 24px monospace';
-      const pillWidth = ctx.measureText(bookingPillText).width + 50;
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.beginPath();
-      ctx.roundRect(width - 60 - pillWidth, 38, pillWidth, 44, 22);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillText(bookingPillText, width - 60 - pillWidth + 25, 68);
-
-      // Event Title
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 44px system-ui, -apple-system, sans-serif';
-      ctx.fillText(event?.title?.en || 'Event Ticket', 60, 150);
-
-      // Venue Headline & Subline
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = '600 26px system-ui, -apple-system, sans-serif';
-      ctx.fillText(venueHeadline, 60, 195);
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '20px system-ui, -apple-system, sans-serif';
-      ctx.fillText(venueSubline, 60, 228);
-
-      // Meta Box (Date & Time + Venue)
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-      ctx.beginPath();
-      ctx.roundRect(60, 260, width - 120, 110, 20);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.stroke();
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '600 16px system-ui, -apple-system, sans-serif';
-      ctx.fillText('DATE & TIME', 90, 298);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
-      ctx.fillText(formattedDateTime, 90, 335);
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '600 16px system-ui, -apple-system, sans-serif';
-      ctx.fillText('PAYMENT STATUS', 650, 298);
-      ctx.fillStyle = '#34d399';
-      ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
-      ctx.fillText(`Paid via ${formattedPaymentMethod} (Demo) · Total: ${formatPrice(booking.totalNPR, 'en')}`, 650, 335);
-
-      // Seats List
-      ctx.fillStyle = '#dc143c';
-      ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
-      ctx.fillText(`CONFIRMED SEATS (${processedSeats.length})`, 60, 415);
-
-      let curY = 450;
-      seatGroups.forEach((grp) => {
-        if (seatGroups.length > 1) {
-          ctx.fillStyle = '#38bdf8';
-          ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
-          ctx.fillText(`• ${grp.groupTitle}`, 60, curY);
-          curY += 32;
-        }
-
-        grp.seats.forEach((seat) => {
-          ctx.fillStyle = 'rgba(220, 20, 60, 0.15)';
-          ctx.beginPath();
-          ctx.roundRect(60, curY - 24, width - 120, 42, 12);
-          ctx.fill();
-          ctx.strokeStyle = 'rgba(220, 20, 60, 0.4)';
-          ctx.stroke();
-
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 19px system-ui, -apple-system, sans-serif';
-          ctx.fillText(seat.fullLabel, 80, curY + 4);
-
-          ctx.fillStyle = '#fca5a5';
-          ctx.font = '600 16px system-ui, -apple-system, sans-serif';
-          ctx.fillText(`NPR ${seat.priceNPR}`, width - 180, curY + 4);
-
-          curY += 52;
-        });
-      });
-
-      // Perforation line
-      curY += 20;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-      ctx.setLineDash([12, 10]);
-      ctx.beginPath();
-      ctx.moveTo(60, curY);
-      ctx.lineTo(width - 60, curY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Section: Individual QR Passes
-      curY += 40;
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 24px system-ui, -apple-system, sans-serif';
-      ctx.fillText('DIGITAL ENTRY QR PASSES (1 PASS PER SEAT)', 60, curY);
-
-      curY += 35;
-
-      // Draw each QR code from hidden QRCodeCanvas elements
-      for (let i = 0; i < processedSeats.length; i++) {
-        const seat = processedSeats[i];
-        const qrCanvas = document.getElementById(`qr-canvas-${i}`) as HTMLCanvasElement;
-        
-        const col = i % 2;
-        const row = Math.floor(i / 2);
-        const cardW = (width - 150) / 2;
-        const cardH = 220;
-        const cardX = 60 + col * (cardW + 30);
-        const cardY = curY + row * (cardH + 20);
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-        ctx.beginPath();
-        ctx.roundRect(cardX, cardY, cardW, cardH, 18);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.stroke();
-
-        // White background for QR code
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.roundRect(cardX + 20, cardY + 25, 170, 170, 12);
-        ctx.fill();
-
-        if (qrCanvas) {
-          ctx.drawImage(qrCanvas, cardX + 25, cardY + 30, 160, 160);
-        }
-
-        // Seat labels next to QR
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
-        ctx.fillText(`Pass #${i + 1}`, cardX + 210, cardY + 60);
-
-        ctx.fillStyle = '#38bdf8';
-        ctx.font = 'bold 18px system-ui, -apple-system, sans-serif';
-        ctx.fillText(seat.shortSeat, cardX + 210, cardY + 95);
-
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '16px system-ui, -apple-system, sans-serif';
-        const sub1 = seat.blockLabel ? `${seat.blockLabel}` : seat.tier;
-        ctx.fillText(sub1, cardX + 210, cardY + 125);
-
-        ctx.fillStyle = '#dc143c';
-        ctx.font = '600 15px monospace';
-        ctx.fillText(booking.id, cardX + 210, cardY + 155);
-      }
-
-      // Requirement 4: Prominent Diagonal DEMO Watermark Stamp across the ticket and image
-      ctx.save();
-      ctx.translate(width / 2, height / 2);
-      ctx.rotate((-28 * Math.PI) / 180);
-
-      // Watermark outer box
-      ctx.fillStyle = 'rgba(220, 20, 60, 0.18)';
-      ctx.strokeStyle = 'rgba(220, 20, 60, 0.75)';
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      ctx.roundRect(-480, -70, 960, 140, 24);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.font = '900 48px system-ui, -apple-system, sans-serif';
-      ctx.fillText('DEMO — NOT VALID FOR ENTRY', 0, -14);
-
-      ctx.fillStyle = '#fca5a5';
-      ctx.font = '700 24px system-ui, -apple-system, sans-serif';
-      ctx.fillText('डेमो टिकट — यो टिकट वास्तविक प्रवेशको लागि मान्य छैन', 0, 34);
-
-      ctx.restore();
-
-      // Trigger download
-      const dataUrl = canvas.toDataURL('image/png');
-      (window as any).__lastTicketDataUrl = dataUrl;
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = `Aasan-Demo-Ticket-${booking.id}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      await generateTicketPDF(ticketData);
     } catch (err) {
-      console.error('Error generating ticket image:', err);
-      window.print();
+      console.error('Error generating PDF:', err);
     } finally {
-      setIsGeneratingImage(false);
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSaveImages = async () => {
+    if (!booking) return;
+    setIsGenerating(true);
+    try {
+      await generateTicketPNGs(ticketData);
+    } catch (err) {
+      console.error('Error generating PNGs:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    if (!booking) return;
+    setIsGenerating(true);
+    try {
+      await generateTicketPDF(ticketData);
+      await new Promise((r) => setTimeout(r, 400));
+      await generateTicketPNGs(ticketData);
+    } catch (err) {
+      console.error('Error downloading all:', err);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
   useEffect(() => {
-    (window as any).__generateTicketDataUrl = handleSaveTicketImage;
-  }, [handleSaveTicketImage]);
+    (window as any).__generateTicketPDF = handleDownloadPDF;
+    (window as any).__generateTicketPNGs = handleSaveImages;
+    (window as any).__generateSingleTicketCanvas = (idx = 0) => createSingleTicketCanvas(ticketData, idx);
+    (window as any).__ticketData = ticketData;
+  }, [ticketData]);
 
   if (!booking) {
     return (
@@ -445,21 +280,6 @@ export const TicketView: React.FC = () => {
 
   return (
     <div className="min-h-[calc(100vh-65px)] max-w-2xl mx-auto px-4 sm:px-6 py-8 flex flex-col items-center select-none">
-      {/* Hidden QRCodeCanvas elements used for high-res image download */}
-      <div className="absolute -left-[9999px] top-0 opacity-0 pointer-events-none" aria-hidden="true">
-        {processedSeats.map((seat, idx) => (
-          <QRCodeCanvas
-            key={`qr-hidden-${idx}`}
-            id={`qr-canvas-${idx}`}
-            value={seat.qrData}
-            size={256}
-            level="H"
-            bgColor="#ffffff"
-            fgColor="#000000"
-          />
-        ))}
-      </div>
-
       {/* Header Back & Status */}
       <div className="w-full flex items-center justify-between mb-4">
         <button
@@ -747,26 +567,98 @@ export const TicketView: React.FC = () => {
         </div>
       </div>
 
-      {/* Ticket Action Buttons: Save Ticket Image, Download All, and Book Another */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md">
+      {/* Ticket Action Buttons: Download PDF, Save images, Download all, and Book Another */}
+      <div className="flex flex-wrap items-center justify-center gap-3 w-full max-w-xl no-print">
         <button
-          id="btn-download-ticket"
+          id="btn-download-pdf"
           type="button"
-          onClick={handleSaveTicketImage}
-          disabled={isGeneratingImage}
-          className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-2 border border-white/15 transition-all active:scale-98 shadow-sm"
+          onClick={handleDownloadPDF}
+          disabled={isGenerating}
+          className="flex-1 min-w-[130px] py-3 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-2 border border-white/15 transition-all active:scale-98 shadow-sm"
         >
-          <Download className="w-4 h-4 text-sky-400" />
-          <span>{isGeneratingImage ? 'Generating...' : processedSeats.length > 1 ? 'Download all' : 'Save Ticket Image'}</span>
+          <FileText className="w-4 h-4 text-sky-400" />
+          <span>{isGenerating ? 'Generating...' : 'Download PDF'}</span>
+        </button>
+
+        <button
+          id="btn-save-images"
+          type="button"
+          onClick={handleSaveImages}
+          disabled={isGenerating}
+          className="flex-1 min-w-[130px] py-3 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-2 border border-white/15 transition-all active:scale-98 shadow-sm"
+        >
+          <Image className="w-4 h-4 text-emerald-400" />
+          <span>{isGenerating ? 'Generating...' : 'Save images'}</span>
+        </button>
+
+        <button
+          id="btn-download-all"
+          type="button"
+          onClick={handleDownloadAll}
+          disabled={isGenerating}
+          className="flex-1 min-w-[130px] py-3 px-4 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs flex items-center justify-center gap-2 border border-white/15 transition-all active:scale-98 shadow-sm"
+        >
+          <Download className="w-4 h-4 text-amber-400" />
+          <span>{isGenerating ? 'Generating...' : 'Download all'}</span>
         </button>
 
         <button
           type="button"
           onClick={resetAll}
-          className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-crimson hover:bg-crimson-dark text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-glow-crimson transition-all active:scale-98"
+          className="w-full sm:w-auto py-3 px-5 rounded-xl bg-crimson hover:bg-crimson-dark text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-glow-crimson transition-all active:scale-98"
         >
           <span>{t('book_another')}</span>
         </button>
+      </div>
+
+      {/* Fallback Print View (only visible when window.print() is called) */}
+      <div className="print-only">
+        {processedSeats.map((seat, pIdx) => (
+          <div key={`print-ticket-${pIdx}`} className="print-ticket-card">
+            <div className="print-ticket-crimson-bar" />
+            <div className="print-ticket-body">
+              <div className="print-ticket-main">
+                <div className="print-ticket-header">
+                  <div>
+                    <span className="print-badge">AASAN ELECTRONIC PASS</span>
+                    <h2 className="print-title">{event?.title?.[language] || event?.title?.en}</h2>
+                    <p className="print-venue">{venueHeadline} • {venueSubline}</p>
+                    <p className="print-date">{formattedDateTime}</p>
+                  </div>
+                  <div className="print-booking-id">
+                    <span>ID: {booking.id}</span>
+                  </div>
+                </div>
+
+                <div className="print-seat-box">
+                  <span className="print-seat-title">{seat.fullLabel}</span>
+                </div>
+
+                <div className="print-meta-row">
+                  <div><strong>Price:</strong> {formatPrice(seat.priceNPR, language)}</div>
+                  <div><strong>Payment:</strong> {formattedPaymentMethod}</div>
+                  <div><strong>Status:</strong> DEMO TICKET — NOT VALID FOR ENTRY</div>
+                </div>
+              </div>
+
+              <div className="print-ticket-stub">
+                <div className="print-stub-badge">{seat.gateOrStand}</div>
+                <div className="print-stub-seat">{seat.shortSeat}</div>
+                <QRCodeSVG
+                  value={seat.qrData}
+                  size={100}
+                  level="M"
+                  bgColor="#ffffff"
+                  fgColor="#000000"
+                />
+                <div className="print-stub-id">{booking.id}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+        <div className="print-disclaimer">
+          Demo concept. Not affiliated with any venue or cinema. Not valid for actual entry.
+        </div>
       </div>
     </div>
   );

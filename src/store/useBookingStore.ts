@@ -294,3 +294,7 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
     return map[selectedEventId] || [];
   },
 }));
+
+if (typeof window !== 'undefined') {
+  (window as any).__bookingStore = useBookingStore;
+}

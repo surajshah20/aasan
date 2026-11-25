@@ -52,3 +52,147 @@ body {
   border: 1px solid rgba(220, 20, 60, 0.3);
   box-shadow: 0 0 30px rgba(220, 20, 60, 0.15);
 }
+
+/* Print Utilities */
+.print-only {
+  display: none;
+}
+
+/* Fallback Print Stylesheet (@media print) */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  *, *:before, *:after {
+    background: transparent !important;
+    color: #111111 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  body {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  }
+
+  header,
+  footer,
+  nav,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .print-ticket-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 12mm !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+
+  .print-ticket-crimson-bar {
+    height: 4px !important;
+    background-color: #dc143c !important;
+    width: 100% !important;
+  }
+
+  .print-ticket-body {
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 16px 20px !important;
+  }
+
+  .print-ticket-main {
+    flex: 1 !important;
+    padding-right: 20px !important;
+    border-right: 1.5px dashed #cbd5e1 !important;
+  }
+
+  .print-ticket-stub {
+    width: 140px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding-left: 16px !important;
+    text-align: center !important;
+  }
+
+  .print-badge {
+    font-size: 8px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.1em !important;
+    color: #dc143c !important;
+    text-transform: uppercase !important;
+  }
+
+  .print-title {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    margin: 4px 0 2px 0 !important;
+    color: #0f172a !important;
+  }
+
+  .print-venue, .print-date {
+    font-size: 10px !important;
+    color: #475569 !important;
+    margin: 1px 0 !important;
+  }
+
+  .print-seat-box {
+    margin: 12px 0 !important;
+    padding: 8px 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-left: 4px solid #dc143c !important;
+    border-radius: 6px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+  }
+
+  .print-meta-row {
+    display: flex !important;
+    gap: 16px !important;
+    font-size: 9px !important;
+    color: #64748b !important;
+  }
+
+  .print-stub-badge {
+    font-size: 9px !important;
+    font-weight: 800 !important;
+    color: #dc143c !important;
+    margin-bottom: 4px !important;
+  }
+
+  .print-stub-seat {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    margin-bottom: 8px !important;
+  }
+
+  .print-stub-id {
+    font-size: 8px !important;
+    font-family: monospace !important;
+    margin-top: 6px !important;
+    color: #64748b !important;
+  }
+
+  .print-disclaimer {
+    text-align: center !important;
+    font-size: 8px !important;
+    color: #94a3b8 !important;
+    margin-top: 8mm !important;
+  }
+}

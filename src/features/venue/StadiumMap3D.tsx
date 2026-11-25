@@ -99,55 +99,175 @@ const StadiumCameraRig: React.FC<{
 };
 
 // ─── 0. Sky Dome & Distant Terrain with Night Atmosphere & City Lights ───
+const ProceduralDayClouds: React.FC<{ isEvening: boolean }> = ({ isEvening }) => {
+  const cloudsGroupRef = useRef<THREE.Group>(null);
+
+  const cloudTexture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const puffs = [
+        { x: 128, y: 128, r: 72, a: 0.38 },
+        { x: 86, y: 135, r: 56, a: 0.32 },
+        { x: 170, y: 130, r: 60, a: 0.34 },
+        { x: 55, y: 145, r: 40, a: 0.25 },
+        { x: 200, y: 140, r: 44, a: 0.26 },
+        { x: 106, y: 100, r: 50, a: 0.28 },
+        { x: 150, y: 98, r: 52, a: 0.30 },
+      ];
+      puffs.forEach((p) => {
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        g.addColorStop(0.00, `rgba(255, 255, 255, ${p.a})`);
+        g.addColorStop(0.55, `rgba(252, 254, 255, ${p.a * 0.65})`);
+        g.addColorStop(0.85, `rgba(240, 248, 255, ${p.a * 0.18})`);
+        g.addColorStop(1.00, 'rgba(255, 255, 255, 0.0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    const t = new THREE.CanvasTexture(canvas);
+    return t;
+  }, []);
+
+  const cloudMaterial = useMemo(() => {
+    return new THREE.MeshBasicMaterial({
+      map: cloudTexture,
+      transparent: true,
+      opacity: isEvening ? 0.0 : 0.82,
+      depthWrite: false,
+    });
+  }, [cloudTexture, isEvening]);
+
+  const cloudPuffs = useMemo(() => {
+    const arr: Array<{ pos: [number, number, number]; scale: [number, number, number]; rotZ: number }> = [];
+    const count = 16;
+    for (let i = 0; i < count; i++) {
+      const ang = (i / count) * Math.PI * 2 + Math.sin(i * 3.7) * 0.25;
+      const rad = 170 + (Math.sin(i * 7.1) * 0.5 + 0.5) * 230;
+      const y = 165 + (Math.cos(i * 4.9) * 0.5 + 0.5) * 55;
+      const x = Math.cos(ang) * rad;
+      const z = Math.sin(ang) * rad;
+      const s = 70 + (Math.sin(i * 2.3) * 0.5 + 0.5) * 60;
+      arr.push({
+        pos: [x, y, z],
+        scale: [s * 1.5, s * 1.1, 1],
+        rotZ: ang + (i * 0.4),
+      });
+    }
+    return arr;
+  }, []);
+
+  useFrame((_, delta) => {
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!prefersReducedMotion && cloudsGroupRef.current) {
+      cloudsGroupRef.current.rotation.y += delta * 0.0022;
+    }
+
+    const targetOpacity = isEvening ? 0.0 : 0.82;
+    cloudMaterial.opacity = THREE.MathUtils.damp(cloudMaterial.opacity, targetOpacity, 3.2, delta);
+    cloudMaterial.visible = cloudMaterial.opacity > 0.01;
+  });
+
+  return (
+    <group ref={cloudsGroupRef}>
+      {cloudPuffs.map((c, idx) => (
+        <mesh key={`cloud-${idx}`} position={c.pos} rotation={[-Math.PI / 2, 0, c.rotZ]} scale={c.scale}>
+          <planeGeometry args={[1, 1]} />
+          <primitive object={cloudMaterial} attach="material" />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 const ProceduralSkyAndTerrain: React.FC<{ isEvening: boolean }> = ({ isEvening }) => {
-  const skyTexture = useMemo(() => {
+  // 1. Night Sky Texture
+  const nightSkyTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 1024;
     const ctx = canvas.getContext('2d');
     if (ctx) {
       const grad = ctx.createLinearGradient(0, 0, 0, 1024);
-      if (isEvening) {
-        // Deep near-black sky with a very subtle dark-blue gradient at the horizon (no bright blue bands)
-        grad.addColorStop(0.00, '#010206'); // Pitch-black zenith
-        grad.addColorStop(0.35, '#02040a'); // Inky night sky
-        grad.addColorStop(0.46, '#040712'); // Deep midnight tint
-        grad.addColorStop(0.505, '#070c1a'); // Very subtle dark-blue horizon gradient
-        grad.addColorStop(0.53, '#04060c'); // Seamless transition into dark terrain
-        grad.addColorStop(1.00, '#010103'); // Lower hemisphere dark
-      } else {
-        // Natural sunny daylight sky gradient
-        grad.addColorStop(0.00, '#1d4ed8');
-        grad.addColorStop(0.28, '#38bdf8');
-        grad.addColorStop(0.46, '#7dd3fc');
-        grad.addColorStop(0.50, '#bae6fd');
-        grad.addColorStop(0.54, '#475569');
-        grad.addColorStop(1.00, '#1e293b');
-      }
+      grad.addColorStop(0.00, '#010206');
+      grad.addColorStop(0.35, '#02040a');
+      grad.addColorStop(0.46, '#040712');
+      grad.addColorStop(0.505, '#070c1a');
+      grad.addColorStop(0.53, '#04060c');
+      grad.addColorStop(1.00, '#010103');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, 1024, 1024);
 
-      // Add faint twinkling stars to the upper hemisphere in evening mode
-      if (isEvening) {
-        for (let s = 0; s < 220; s++) {
-          const sx = (Math.sin(s * 91.3 + 12.7) * 0.5 + 0.5) * 1024;
-          const sy = (Math.cos(s * 73.1 + 8.4) * 0.5 + 0.5) * 700; // Upper 70% of sky
-          const sr = 0.5 + (Math.sin(s * 33.7) * 0.5 + 0.5) * 1.1;
-          const sa = 0.25 + (Math.cos(s * 51.9) * 0.5 + 0.5) * 0.65;
-          ctx.fillStyle = `rgba(255, 255, 255, ${sa.toFixed(2)})`;
-          ctx.beginPath();
-          ctx.arc(sx, sy, sr, 0, Math.PI * 2);
-          ctx.fill();
-        }
+      for (let s = 0; s < 220; s++) {
+        const sx = (Math.sin(s * 91.3 + 12.7) * 0.5 + 0.5) * 1024;
+        const sy = (Math.cos(s * 73.1 + 8.4) * 0.5 + 0.5) * 700;
+        const sr = 0.5 + (Math.sin(s * 33.7) * 0.5 + 0.5) * 1.1;
+        const sa = 0.25 + (Math.cos(s * 51.9) * 0.5 + 0.5) * 0.65;
+        ctx.fillStyle = `rgba(255, 255, 255, ${sa.toFixed(2)})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.ClampToEdgeWrapping;
     tex.wrapT = THREE.ClampToEdgeWrapping;
     return tex;
-  }, [isEvening]);
+  }, []);
 
-  // Round soft glowing sprite texture for distant hill settlement lights
+  // 2. Day Sky Texture: Clear blue at top to warm, paler tone at horizon
+  const daySkyTexture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const grad = ctx.createLinearGradient(0, 0, 0, 1024);
+      grad.addColorStop(0.00, '#1c5ac2'); // Rich clear sky blue at zenith
+      grad.addColorStop(0.18, '#3288ec'); // Vibrant sky blue
+      grad.addColorStop(0.34, '#6ebcf8'); // Light clear azure
+      grad.addColorStop(0.44, '#bae6fd'); // Pale sky
+      grad.addColorStop(0.485, '#e0f2fe'); // Pale horizon transition
+      grad.addColorStop(0.50, '#fff7ed'); // Warm pale golden-white horizon line
+      grad.addColorStop(0.525, '#96b8d2'); // Soft atmospheric haze at ground level
+      grad.addColorStop(1.00, '#799db8'); // Lower terrain base
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 1024, 1024);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
+  }, []);
+
+  const nightSkyMaterial = useMemo(() => {
+    return new THREE.MeshBasicMaterial({
+      map: nightSkyTexture,
+      side: THREE.BackSide,
+      depthWrite: false,
+      transparent: true,
+      opacity: isEvening ? 1.0 : 0.0,
+    });
+  }, [nightSkyTexture, isEvening]);
+
+  const daySkyMaterial = useMemo(() => {
+    return new THREE.MeshBasicMaterial({
+      map: daySkyTexture,
+      side: THREE.BackSide,
+      depthWrite: false,
+      transparent: true,
+      opacity: isEvening ? 0.0 : 1.0,
+    });
+  }, [daySkyTexture, isEvening]);
+
+  // Round soft glowing sprite texture for distant hill settlement lights in evening
   const roundDotTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
@@ -167,14 +287,15 @@ const ProceduralSkyAndTerrain: React.FC<{ isEvening: boolean }> = ({ isEvening }
     return t;
   }, []);
 
-  const hillsGeometry = useMemo(() => {
+  // Night Hills Geometry (Single ring, dark near-black tones)
+  const nightHillsGeometry = useMemo(() => {
     const N = 80;
     const R = 270;
     const positions: number[] = [];
     const colors: number[] = [];
 
-    const baseCol = isEvening ? [0.012, 0.015, 0.022] : [0.22, 0.32, 0.38];
-    const peakCol = isEvening ? [0.018, 0.024, 0.035] : [0.35, 0.45, 0.52];
+    const baseCol = [0.012, 0.015, 0.022];
+    const peakCol = [0.018, 0.024, 0.035];
 
     for (let i = 0; i < N; i++) {
       const t0 = (i / N) * Math.PI * 2;
@@ -207,25 +328,155 @@ const ProceduralSkyAndTerrain: React.FC<{ isEvening: boolean }> = ({ isEvening }
     geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geom.computeVertexNormals();
     return geom;
+  }, []);
+
+  // Day Hills Geometry: Layered 3D Sloped Mountain Ridges with Atmospheric Haze (lighter & bluer with distance)
+  const dayHillsGeometry = useMemo(() => {
+    const N = 140;
+    const positions: number[] = [];
+    const colors: number[] = [];
+
+    // Ridge 1: Mid-distance rolling Himalayan foothills
+    // Front foot at R=255m, Crest at R=280m (height 12-26m), Back foot at R=315m
+    const r1Base = [0.24, 0.36, 0.28]; // valley greenery
+    const r1Peak = [0.38, 0.52, 0.42]; // sunlit grassy crest
+
+    for (let i = 0; i < N; i++) {
+      const t0 = (i / N) * Math.PI * 2;
+      const t1 = ((i + 1) / N) * Math.PI * 2;
+
+      const h0 = 13 + Math.sin(t0 * 3.4) * 6.2 + Math.cos(t0 * 7.1) * 3.8 + Math.sin(t0 * 11.2) * 2.2;
+      const h1 = 13 + Math.sin(t1 * 3.4) * 6.2 + Math.cos(t1 * 7.1) * 3.8 + Math.sin(t1 * 11.2) * 2.2;
+
+      const cos0 = Math.cos(t0), sin0 = Math.sin(t0);
+      const cos1 = Math.cos(t1), sin1 = Math.sin(t1);
+
+      // Front slope (facing stadium and sun)
+      const xF0 = 255 * cos0, zF0 = 255 * sin0;
+      const xF1 = 255 * cos1, zF1 = 255 * sin1;
+      const xP0 = 280 * cos0, zP0 = 280 * sin0;
+      const xP1 = 280 * cos1, zP1 = 280 * sin1;
+
+      positions.push(
+        xF0, -3, zF0,
+        xF1, -3, zF1,
+        xP1, h1, zP1,
+        xF0, -3, zF0,
+        xP1, h1, zP1,
+        xP0, h0, zP0
+      );
+      colors.push(
+        ...r1Base, ...r1Base, ...r1Peak,
+        ...r1Base, ...r1Peak, ...r1Peak
+      );
+
+      // Back slope (falling away into valley)
+      const xB0 = 315 * cos0, zB0 = 315 * sin0;
+      const xB1 = 315 * cos1, zB1 = 315 * sin1;
+      positions.push(
+        xP0, h0, zP0,
+        xP1, h1, zP1,
+        xB1, -1, zB1,
+        xP0, h0, zP0,
+        xB1, -1, zB1,
+        xB0, -1, zB0
+      );
+      colors.push(
+        ...r1Peak, ...r1Peak, ...r1Base,
+        ...r1Peak, ...r1Base, ...r1Base
+      );
+    }
+
+    // Ridge 2: Distant mountains with atmospheric haze (lighter and bluer with distance)
+    // Front foot at R=330m, Crest at R=365m (height 32-68m), Back foot at R=410m
+    const r2Base = [0.46, 0.59, 0.72]; // atmospheric valley haze
+    const r2Peak = [0.65, 0.78, 0.90]; // pale blue mountain peak merging into horizon sky
+
+    for (let i = 0; i < N; i++) {
+      const t0 = (i / N) * Math.PI * 2;
+      const t1 = ((i + 1) / N) * Math.PI * 2;
+
+      const h0 = 32 + Math.sin(t0 * 2.2 + 1.2) * 16 + Math.cos(t0 * 4.8 + 0.5) * 10 + Math.sin(t0 * 9.1) * 5.0;
+      const h1 = 32 + Math.sin(t1 * 2.2 + 1.2) * 16 + Math.cos(t1 * 4.8 + 0.5) * 10 + Math.sin(t1 * 9.1) * 5.0;
+
+      const cos0 = Math.cos(t0), sin0 = Math.sin(t0);
+      const cos1 = Math.cos(t1), sin1 = Math.sin(t1);
+
+      // Front slope
+      const xF0 = 330 * cos0, zF0 = 330 * sin0;
+      const xF1 = 330 * cos1, zF1 = 330 * sin1;
+      const xP0 = 365 * cos0, zP0 = 365 * sin0;
+      const xP1 = 365 * cos1, zP1 = 365 * sin1;
+
+      positions.push(
+        xF0, -5, zF0,
+        xF1, -5, zF1,
+        xP1, h1, zP1,
+        xF0, -5, zF0,
+        xP1, h1, zP1,
+        xP0, h0, zP0
+      );
+      colors.push(
+        ...r2Base, ...r2Base, ...r2Peak,
+        ...r2Base, ...r2Peak, ...r2Peak
+      );
+
+      // Back slope
+      const xB0 = 410 * cos0, zB0 = 410 * sin0;
+      const xB1 = 410 * cos1, zB1 = 410 * sin1;
+      positions.push(
+        xP0, h0, zP0,
+        xP1, h1, zP1,
+        xB1, -3, zB1,
+        xP0, h0, zP0,
+        xB1, -3, zB1,
+        xB0, -3, zB0
+      );
+      colors.push(
+        ...r2Peak, ...r2Peak, ...r2Base,
+        ...r2Peak, ...r2Base, ...r2Base
+      );
+    }
+
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geom.computeVertexNormals();
+    return geom;
+  }, []);
+
+  const nightHillsMaterial = useMemo(() => {
+    return new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: isEvening ? 1.0 : 0.0,
+    });
   }, [isEvening]);
 
-  // Distant Kathmandu & Kirtipur valley city lights: small round, soft glowing points (fewer and varied)
+  const dayHillsMaterial = useMemo(() => {
+    return new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: isEvening ? 0.0 : 1.0,
+    });
+  }, [isEvening]);
+
+  // Distant Kathmandu & Kirtipur valley city lights in evening mode
   const cityLightsData = useMemo(() => {
-    if (!isEvening) return null;
-    const count = 65; // Fewer, cleaner, softer lights
+    const count = 65;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
     const R = 265;
 
     const palette = [
-      [1.0, 0.98, 0.92], // warm white
-      [1.0, 0.94, 0.82], // soft ivory
-      [0.98, 0.78, 0.45], // warm amber glow
-      [0.95, 0.60, 0.20], // deep amber
+      [1.0, 0.98, 0.92],
+      [1.0, 0.94, 0.82],
+      [0.98, 0.78, 0.45],
+      [0.95, 0.60, 0.20],
     ];
 
     for (let i = 0; i < count; i++) {
-      const clusterAngle = ((i % 12) / 12) * Math.PI * 2 + (Math.sin(i * 3.7) * 0.20);
+      const clusterAngle = ((i % 12) / 12) * Math.PI * 2 + Math.sin(i * 3.7) * 0.2;
       const dist = R + Math.sin(i * 5.1) * 8;
       const x = Math.cos(clusterAngle) * dist;
       const z = Math.sin(clusterAngle) * dist;
@@ -245,28 +496,70 @@ const ProceduralSkyAndTerrain: React.FC<{ isEvening: boolean }> = ({ isEvening }
     geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     return geom;
-  }, [isEvening]);
+  }, []);
+
+  const cityLightsMaterial = useMemo(() => {
+    return new THREE.PointsMaterial({
+      map: roundDotTexture,
+      size: 3.8,
+      vertexColors: true,
+      transparent: true,
+      opacity: isEvening ? 0.88 : 0.0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+  }, [roundDotTexture, isEvening]);
+
+  // Smooth ~1-second cross-fade between Day and Night sky/terrain
+  useFrame((_, delta) => {
+    const targetDay = isEvening ? 0.0 : 1.0;
+    const targetNight = isEvening ? 1.0 : 0.0;
+
+    daySkyMaterial.opacity = THREE.MathUtils.damp(daySkyMaterial.opacity, targetDay, 3.2, delta);
+    daySkyMaterial.visible = daySkyMaterial.opacity > 0.01;
+
+    nightSkyMaterial.opacity = THREE.MathUtils.damp(nightSkyMaterial.opacity, targetNight, 3.2, delta);
+    nightSkyMaterial.visible = nightSkyMaterial.opacity > 0.01;
+
+    dayHillsMaterial.opacity = THREE.MathUtils.damp(dayHillsMaterial.opacity, targetDay, 3.2, delta);
+    dayHillsMaterial.visible = dayHillsMaterial.opacity > 0.01;
+
+    nightHillsMaterial.opacity = THREE.MathUtils.damp(nightHillsMaterial.opacity, targetNight, 3.2, delta);
+    nightHillsMaterial.visible = nightHillsMaterial.opacity > 0.01;
+
+    cityLightsMaterial.opacity = THREE.MathUtils.damp(cityLightsMaterial.opacity, isEvening ? 0.88 : 0.0, 3.2, delta);
+    cityLightsMaterial.visible = cityLightsMaterial.opacity > 0.01;
+  });
 
   return (
     <group position={[0, 0, 0]}>
+      {/* Night Sky Dome */}
       <mesh position={[0, -20, 0]}>
         <sphereGeometry args={[700, 32, 16]} />
-        <meshBasicMaterial map={skyTexture} side={THREE.BackSide} depthWrite={false} />
+        <primitive object={nightSkyMaterial} attach="material" />
       </mesh>
-      <mesh geometry={hillsGeometry}>
-        <meshBasicMaterial vertexColors />
+
+      {/* Day Sky Dome */}
+      <mesh position={[0, -20, 0]}>
+        <sphereGeometry args={[700, 32, 16]} />
+        <primitive object={daySkyMaterial} attach="material" />
       </mesh>
+
+      {/* Soft Drifting Cumulus Clouds in Day Mode */}
+      <ProceduralDayClouds isEvening={isEvening} />
+
+      {/* Distant Terrain: Layered Ridges with Atmospheric Haze in Day, Deep Silhouette in Night */}
+      <mesh geometry={nightHillsGeometry}>
+        <primitive object={nightHillsMaterial} attach="material" />
+      </mesh>
+      <mesh geometry={dayHillsGeometry}>
+        <primitive object={dayHillsMaterial} attach="material" />
+      </mesh>
+
+      {/* Kathmandu Valley Night Settlement Lights */}
       {cityLightsData && (
         <points geometry={cityLightsData}>
-          <pointsMaterial
-            map={roundDotTexture}
-            size={3.8}
-            vertexColors
-            transparent
-            opacity={0.88}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-          />
+          <primitive object={cityLightsMaterial} attach="material" />
         </points>
       )}
     </group>
@@ -276,30 +569,187 @@ const ProceduralSkyAndTerrain: React.FC<{ isEvening: boolean }> = ({ isEvening }
 // ─── 1. Field & Pitch with Saturated Warm Night Turf & Floodlight Illumination Pool ───
 const ProceduralCricketField: React.FC<{ isEvening: boolean }> = ({ isEvening }) => {
   const softGroundTexture = useMemo(() => {
-    const size = 512;
+    if (isEvening) {
+      // In evening mode: deep near-black ground (100% untouched)
+      const size = 512;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const grad = ctx.createRadialGradient(
+          size / 2, size / 2, 40,
+          size / 2, size / 2, size / 2
+        );
+        grad.addColorStop(0.0, '#04060b');
+        grad.addColorStop(0.40, '#030408');
+        grad.addColorStop(0.70, '#020205');
+        grad.addColorStop(1.0, '#010103');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+      }
+      const tex = new THREE.CanvasTexture(canvas);
+      return tex;
+    }
+
+    // In day mode: Believable natural valley surface
+    // Mix of dry earth and short green grass in open areas,
+    // grey concrete / asphalt paths around outer wall and under towers,
+    // subtle noise / texture, and soft fade to horizon.
+    const size = 1024;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      const grad = ctx.createRadialGradient(
-        size / 2, size / 2, 40,
-        size / 2, size / 2, size / 2
-      );
-      if (isEvening) {
-        grad.addColorStop(0.0, '#04060b');
-        grad.addColorStop(0.40, '#030408');
-        grad.addColorStop(0.70, '#020205');
-        grad.addColorStop(1.0, '#010103');
-      } else {
-        grad.addColorStop(0.0, '#475569');
-        grad.addColorStop(0.50, '#334155');
-        grad.addColorStop(1.0, '#1e293b');
+      const cx = size / 2;
+      const cy = size / 2;
+      // 1 meter in 3D scene = 512px / 340m = 1.5058px
+      const m2px = 512 / 340;
+
+      // Base: warm dry earth / clay loam
+      ctx.fillStyle = '#83745c';
+      ctx.fillRect(0, 0, size, size);
+
+      // Deterministic PRNG for consistent organic mottling
+      const rng = (s: number) => {
+        const x = Math.sin(s * 93.17) * 43758.5453;
+        return x - Math.floor(x);
+      };
+
+      // Layer 1: Dry sandy-earth loam patches across ground
+      for (let i = 0; i < 460; i++) {
+        const ang = rng(i * 1.7) * Math.PI * 2;
+        const dist = (55 + rng(i * 3.3) * 205) * m2px;
+        const px = cx + Math.cos(ang) * dist;
+        const py = cy + Math.sin(ang) * dist;
+        const rad = (14 + rng(i * 7.1) * 32) * m2px;
+        const g = ctx.createRadialGradient(px, py, 0, px, py, rad);
+        g.addColorStop(0.00, 'rgba(148, 131, 106, 0.45)');
+        g.addColorStop(0.65, 'rgba(136, 119, 94, 0.22)');
+        g.addColorStop(1.00, 'rgba(136, 119, 94, 0.0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(px, py, rad, 0, Math.PI * 2);
+        ctx.fill();
       }
-      ctx.fillStyle = grad;
+
+      // Layer 2: Short hardy green grass clusters in open meadow areas
+      for (let i = 0; i < 580; i++) {
+        const ang = rng(i * 2.9 + 50) * Math.PI * 2;
+        const dist = (65 + rng(i * 4.1 + 80) * 195) * m2px;
+        const px = cx + Math.cos(ang) * dist;
+        const py = cy + Math.sin(ang) * dist;
+        const rad = (12 + rng(i * 5.7) * 28) * m2px;
+        const g = ctx.createRadialGradient(px, py, 0, px, py, rad);
+        const cA = 0.28 + rng(i * 9.1) * 0.32;
+        g.addColorStop(0.00, `rgba(88, 118, 72, ${cA.toFixed(2)})`);
+        g.addColorStop(0.60, `rgba(102, 132, 85, ${(cA * 0.6).toFixed(2)})`);
+        g.addColorStop(1.00, 'rgba(92, 122, 76, 0.0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(px, py, rad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Layer 3: Fine stipple noise for tactile surface grain
+      const imgData = ctx.getImageData(0, 0, size, size);
+      const d = imgData.data;
+      for (let p = 0; p < d.length; p += 4) {
+        const n = (((p * 13) % 29) - 14) * 0.75;
+        d[p] = Math.max(0, Math.min(255, d[p] + n));
+        d[p + 1] = Math.max(0, Math.min(255, d[p + 1] + n));
+        d[p + 2] = Math.max(0, Math.min(255, d[p + 2] + n));
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+      // Layer 4: Grey concrete / asphalt perimeter concourse & ring road around outer wall
+      const pathRx0 = 79 * m2px;
+      const pathRz0 = 89 * m2px;
+      const pathRx1 = 105 * m2px;
+      const pathRz1 = 115 * m2px;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, pathRx1, pathRz1, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#78828e';
+      ctx.fill();
+
+      // Inner cutout for the stadium bowl footprint
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, pathRx0, pathRz0, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Concourse surface texture & subtle joint rings
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, (pathRx0 + pathRx1) / 2, (pathRz0 + pathRz1) / 2, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(98, 107, 118, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Radial joint lines around perimeter concourse
+      for (let j = 0; j < 36; j++) {
+        const ja = (j / 36) * Math.PI * 2;
+        const cosA = Math.cos(ja);
+        const sinA = Math.sin(ja);
+        ctx.beginPath();
+        ctx.moveTo(cx + cosA * pathRx0, cy + sinA * pathRz0);
+        ctx.lineTo(cx + cosA * pathRx1, cy + sinA * pathRz1);
+        ctx.strokeStyle = 'rgba(80, 88, 98, 0.35)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Layer 5: Concrete pads and service walkways under the 6 floodlight towers & structures
+      const towerLocations: [number, number][] = [
+        [88, -48], [88, 10], [88, 72],
+        [-88, -72], [-88, 48], [-88, -10],
+        [48, -84], // Scoreboard base
+        [0, -90.5] // VIP Canopy base
+      ];
+      towerLocations.forEach(([tx, tz]) => {
+        const tpx = cx + tx * m2px;
+        const tpy = cy + tz * m2px;
+        // Concrete pad
+        ctx.fillStyle = '#7c8692';
+        ctx.beginPath();
+        ctx.arc(tpx, tpy, 9 * m2px, 0, Math.PI * 2);
+        ctx.fill();
+        // Spur walkway connecting pad to concourse
+        ctx.strokeStyle = '#78828e';
+        ctx.lineWidth = 5 * m2px;
+        ctx.beginPath();
+        ctx.moveTo(tpx, tpy);
+        const dir = Math.hypot(tx, tz);
+        ctx.lineTo(cx + (tx / dir) * 85 * m2px, cy + (tz / dir) * 95 * m2px);
+        ctx.stroke();
+      });
+
+      // Layer 6: Soft contact shadow where outer wall meets the ground
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 80.5 * m2px, 90.5 * m2px, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(20, 26, 34, 0.45)';
+      ctx.lineWidth = 14;
+      ctx.stroke();
+      ctx.restore();
+
+      // Layer 7: Soft fade to the horizon so there is NO visible disc edge
+      const fadeGrad = ctx.createRadialGradient(cx, cy, 215 * m2px, cx, cy, 340 * m2px);
+      fadeGrad.addColorStop(0.00, 'rgba(150, 184, 210, 0.0)');
+      fadeGrad.addColorStop(0.65, 'rgba(150, 184, 210, 0.65)');
+      fadeGrad.addColorStop(0.92, 'rgba(150, 184, 210, 0.95)');
+      fadeGrad.addColorStop(1.00, 'rgba(150, 184, 210, 1.0)');
+      ctx.fillStyle = fadeGrad;
       ctx.fillRect(0, 0, size, size);
     }
     const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.ClampToEdgeWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
     return tex;
   }, [isEvening]);
 
@@ -356,7 +806,7 @@ const ProceduralCricketField: React.FC<{ isEvening: boolean }> = ({ isEvening })
   return (
     <group position={[0, 0, 0]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
-        <circleGeometry args={[290, 64]} />
+        <circleGeometry args={[isEvening ? 290 : 340, 96]} />
         <meshStandardMaterial map={softGroundTexture} roughness={0.96} />
       </mesh>
 
@@ -626,6 +1076,22 @@ const ProceduralStadiumBowl: React.FC<{ isEvening?: boolean }> = ({ isEvening })
       }
     }
 
+    function addQuadGrad(
+      p0: [number, number, number],
+      p1: [number, number, number],
+      p2: [number, number, number],
+      p3: [number, number, number],
+      n: [number, number, number],
+      c0: [number, number, number],
+      c1: [number, number, number],
+      c2: [number, number, number],
+      c3: [number, number, number]
+    ) {
+      positions.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3);
+      normals.push(...n, ...n, ...n, ...n, ...n, ...n);
+      colors.push(...c0, ...c1, ...c2, ...c0, ...c2, ...c3);
+    }
+
     // Concrete bowl colors with deep riser ambient occlusion in evening mode
     const treadColor: [number, number, number] = isEvening ? [0.34, 0.37, 0.43] : [0.42, 0.46, 0.52];
     const riserColor: [number, number, number] = isEvening ? [0.17, 0.19, 0.25] : [0.28, 0.32, 0.38];
@@ -815,7 +1281,31 @@ const ProceduralStadiumBowl: React.FC<{ isEvening?: boolean }> = ({ isEvening })
       const ow1: [number, number, number] = [(Rx + capR) * cos1, 0, (Rz + capR) * sin1];
       const ow2: [number, number, number] = [(Rx + capR) * cos1, pY, (Rz + capR) * sin1];
       const ow3: [number, number, number] = [(Rx + capR) * cos0, pY, (Rz + capR) * sin0];
-      addQuad(ow0, ow1, ow2, ow3, outNorm, wallColor);
+
+      if (isEvening) {
+        // Night mode: uniform dark tone (100% untouched)
+        addQuad(ow0, ow1, ow2, ow3, outNorm, wallColor);
+      } else {
+        // Day mode: Concrete tone with vertical panel lines, lighter at top, and soft contact shadow at base
+        const isPanelSeam = (a % 3 === 0);
+        const midPY = pY * 0.45;
+
+        // Base contact shadow where wall meets the ground (darker concrete shadow)
+        const cBase0: [number, number, number] = isPanelSeam ? [0.26, 0.28, 0.32] : [0.35, 0.38, 0.42];
+        const cBase1: [number, number, number] = [0.35, 0.38, 0.42];
+        const cMid0: [number, number, number] = isPanelSeam ? [0.38, 0.41, 0.46] : [0.52, 0.56, 0.61];
+        const cMid1: [number, number, number] = [0.52, 0.56, 0.61];
+        const cTop0: [number, number, number] = isPanelSeam ? [0.46, 0.50, 0.55] : [0.68, 0.71, 0.75];
+        const cTop1: [number, number, number] = [0.68, 0.71, 0.75];
+
+        const owM0: [number, number, number] = [(Rx + capR) * cos0, midPY, (Rz + capR) * sin0];
+        const owM1: [number, number, number] = [(Rx + capR) * cos1, midPY, (Rz + capR) * sin1];
+
+        // Lower panel quad (ground contact shadow to mid-height)
+        addQuadGrad(ow0, ow1, owM1, owM0, outNorm, cBase0, cBase1, cMid1, cMid0);
+        // Upper panel quad (mid-height to light sunlit parapet)
+        addQuadGrad(owM0, owM1, ow2, ow3, outNorm, cMid0, cMid1, cTop1, cTop0);
+      }
     }
 
     const vomPositions: number[] = [];
@@ -1110,18 +1600,18 @@ const ProceduralStadiumDetails: React.FC<{
         {[-12, -6, 0, 6, 12].map((ox, i) => (
           <mesh key={`col-${i}`} position={[ox, 7.5, 0]}>
             <cylinderGeometry args={[0.22, 0.26, 15.0, 10]} />
-            <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.3} />
+            <meshStandardMaterial color={isEvening ? "#334155" : "#64748b"} metalness={0.7} roughness={0.3} />
           </mesh>
         ))}
         {[-12, -6, 0, 6, 12].map((ox, i) => (
           <mesh key={`rafter-${i}`} position={[ox, 14.8, 3.8]} rotation={[0.16, 0, 0]}>
             <boxGeometry args={[0.24, 0.45, 8.2]} />
-            <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
+            <meshStandardMaterial color={isEvening ? "#475569" : "#64748b"} metalness={0.7} roughness={0.3} />
           </mesh>
         ))}
         <mesh position={[0, 15.2, 3.8]} rotation={[0.16, 0, 0]}>
           <boxGeometry args={[26.4, 0.18, 8.6]} />
-          <meshStandardMaterial color="#1e293b" roughness={0.65} metalness={0.4} />
+          <meshStandardMaterial color={isEvening ? "#1e293b" : "#94a3b8"} roughness={0.65} metalness={isEvening ? 0.4 : 0.2} />
         </mesh>
       </group>
 
@@ -1145,7 +1635,7 @@ const ProceduralStadiumDetails: React.FC<{
         {/* Concrete Foundation Base Footing */}
         <mesh position={[0, -16.0, 0]} castShadow receiveShadow>
           <boxGeometry args={[6.0, 3.2, 6.0]} />
-          <meshStandardMaterial color="#334155" roughness={0.8} />
+          <meshStandardMaterial color={isEvening ? "#334155" : "#78828e"} roughness={0.8} />
         </mesh>
         {/* Dual Steel Lattice Support Pylons */}
         {[-3.6, 3.6].map((px, idx) => (
@@ -1249,8 +1739,8 @@ const SingleFloodlightTower: React.FC<{
     }
   }, [tower, headWorldPos, angleDeg, beamLength]);
 
-  // Star flare scales smoothly with camera distance
-  useFrame(({ camera }) => {
+  // Star flare scales smoothly with camera distance, spotLight smoothly dims on transition
+  useFrame(({ camera }, delta) => {
     const camPos = camera.position;
     const distToHead = camPos.distanceTo(headWorldPos);
 
@@ -1264,6 +1754,16 @@ const SingleFloodlightTower: React.FC<{
         starFlareRef.current.scale.set(scaleVal, scaleVal, 1);
       }
     }
+
+    if (spotLightRef.current) {
+      const targetIntensity = isEvening ? 135 : 0;
+      spotLightRef.current.intensity = THREE.MathUtils.damp(
+        spotLightRef.current.intensity,
+        targetIntensity,
+        3.2,
+        delta
+      );
+    }
   });
 
   return (
@@ -1271,7 +1771,7 @@ const SingleFloodlightTower: React.FC<{
       {/* 1. Heavy Concrete Foundation Footing - on ground */}
       <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[2.8, 3.2, 1.8, 12]} />
-        <meshStandardMaterial color="#334155" roughness={0.8} />
+        <meshStandardMaterial color={isEvening ? "#334155" : "#78828e"} roughness={0.8} />
       </mesh>
 
       {/* 2. Main Steel Mast Pole - strictly vertical, terminates cleanly at y=45.0m below the head */}
@@ -1427,7 +1927,7 @@ const SingleFloodlightTower: React.FC<{
           penumbra={0.92}
           distance={180}
           decay={1.0}
-          castShadow={!isLiteMode && (tower.id.includes('nw') || tower.id.includes('se') || tower.id.includes('west'))}
+          castShadow={!isLiteMode && isEvening && (tower.id.includes('nw') || tower.id.includes('se') || tower.id.includes('west'))}
           shadow-mapSize={[1024, 1024]}
           shadow-bias={-0.0003}
         />
@@ -1829,56 +2329,122 @@ const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = (
     return obj;
   }, []);
 
+  const sunRef = useRef<THREE.DirectionalLight>(null);
+  const fillRef = useRef<THREE.DirectionalLight>(null);
+  const hemiRef = useRef<THREE.HemisphereLight>(null);
+  const nightCenterRef = useRef<THREE.PointLight>(null);
+  const nightBouncesRef = useRef<THREE.Group>(null);
+  const { scene } = useThree();
+
+  const factorRef = useRef(isEvening ? 0.0 : 1.0);
+
+  // Smooth ~1-second cross-fade of sky lighting, sun, and fog
+  useFrame((_, delta) => {
+    const target = isEvening ? 0.0 : 1.0;
+    factorRef.current = THREE.MathUtils.damp(factorRef.current, target, 3.2, delta);
+    const f = factorRef.current; // 0.0 = evening, 1.0 = day
+
+    if (sunRef.current) {
+      sunRef.current.intensity = THREE.MathUtils.lerp(0.0, 0.95, f);
+    }
+    if (fillRef.current) {
+      fillRef.current.intensity = THREE.MathUtils.lerp(0.0, 0.68, f);
+    }
+    if (hemiRef.current) {
+      hemiRef.current.intensity = THREE.MathUtils.lerp(0.45, 1.38, f);
+      hemiRef.current.color.lerpColors(
+        new THREE.Color('#243248'),
+        new THREE.Color('#b8daf5'),
+        f
+      );
+      hemiRef.current.groundColor.lerpColors(
+        new THREE.Color('#080a10'),
+        new THREE.Color('#7a7264'),
+        f
+      );
+    }
+    if (nightCenterRef.current) {
+      nightCenterRef.current.intensity = THREE.MathUtils.lerp(50.0, 0.0, f);
+    }
+    if (nightBouncesRef.current) {
+      nightBouncesRef.current.children.forEach((c) => {
+        if (c instanceof THREE.PointLight) {
+          c.intensity = THREE.MathUtils.lerp(22.0, 0.0, f);
+        }
+      });
+    }
+
+    // Smoothly blend scene fog and background color
+    if (scene.background instanceof THREE.Color) {
+      scene.background.lerpColors(
+        new THREE.Color('#010206'),
+        new THREE.Color('#8fc0e8'),
+        f
+      );
+    }
+    if (scene.fog && scene.fog instanceof THREE.Fog) {
+      scene.fog.color.lerpColors(
+        new THREE.Color('#010206'),
+        new THREE.Color('#a8cde8'),
+        f
+      );
+      scene.fog.near = THREE.MathUtils.lerp(160, 140, f);
+      scene.fog.far = THREE.MathUtils.lerp(680, 780, f);
+    }
+  });
+
   return (
     <>
       <primitive object={pitchTarget} />
-      {isEvening ? (
-        <>
-          {/* Faint night ambient fill: deep blue sky and dark earth tone */}
-          <hemisphereLight
-            args={['#243248', '#080a10', 0.45]}
-          />
 
-          {/* Stand warm spill fill: softly elevates illumination on lower and upper tiers without creating a hotspot on pitch */}
-          <pointLight
-            position={[0, 26.0, 0]}
-            color="#fff8ec"
-            intensity={50}
-            distance={115}
-            decay={1.0}
-          />
+      {/* Hemisphere fill: blends between night sky/earth and daytime azure/warm-earth */}
+      <hemisphereLight
+        ref={hemiRef}
+        args={[isEvening ? '#243248' : '#b8daf5', isEvening ? '#080a10' : '#7a7264', isEvening ? 0.45 : 1.38]}
+      />
 
-          {/* Faint perimeter bounce: 4 low-intensity points near the boundary facing stands */}
-          <pointLight position={[38, 5, 38]} color="#dcfce7" intensity={22} distance={55} decay={1.0} />
-          <pointLight position={[-38, 5, 38]} color="#dcfce7" intensity={22} distance={55} decay={1.0} />
-          <pointLight position={[38, 5, -38]} color="#dcfce7" intensity={22} distance={55} decay={1.0} />
-          <pointLight position={[-38, 5, -38]} color="#dcfce7" intensity={22} distance={55} decay={1.0} />
-        </>
-      ) : (
-        <>
-          {/* Bright natural daytime illumination */}
-          <hemisphereLight
-            args={['#93c5fd', '#475569', 1.05]}
-          />
-          <directionalLight
-            position={[65, 95, 45]}
-            intensity={2.3}
-            color="#fffbeb"
-            castShadow={!isLiteMode}
-            shadow-mapSize={[2048, 2048]}
-            shadow-bias={-0.0003}
-            shadow-camera-left={-120}
-            shadow-camera-right={120}
-            shadow-camera-top={120}
-            shadow-camera-bottom={-120}
-          />
-          <directionalLight
-            position={[-50, 60, -45]}
-            intensity={0.75}
-            color="#bfdbfe"
-          />
-        </>
-      )}
+      {/* Sun Directional Light: soft shadow edges (radius 8.0), 31% shadow opacity, single direction */}
+      <directionalLight
+        ref={sunRef}
+        position={[85, 125, 60]}
+        intensity={isEvening ? 0 : 0.95}
+        color="#fffbf0"
+        castShadow={!isLiteMode}
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0004}
+        shadow-radius={8.0}
+        shadow-camera-left={-130}
+        shadow-camera-right={130}
+        shadow-camera-top={130}
+        shadow-camera-bottom={-130}
+        shadow-camera-far={350}
+      />
+
+      {/* Secondary Daytime Sky Fill Light (castShadow=false) */}
+      <directionalLight
+        ref={fillRef}
+        position={[-60, 65, -45]}
+        intensity={isEvening ? 0 : 0.68}
+        color="#dbeafe"
+      />
+
+      {/* Evening Stand warm spill fill */}
+      <pointLight
+        ref={nightCenterRef}
+        position={[0, 26.0, 0]}
+        color="#fff8ec"
+        intensity={isEvening ? 50 : 0}
+        distance={115}
+        decay={1.0}
+      />
+
+      {/* Evening faint perimeter bounce */}
+      <group ref={nightBouncesRef}>
+        <pointLight position={[38, 5, 38]} color="#dcfce7" intensity={isEvening ? 22 : 0} distance={55} decay={1.0} />
+        <pointLight position={[-38, 5, 38]} color="#dcfce7" intensity={isEvening ? 22 : 0} distance={55} decay={1.0} />
+        <pointLight position={[38, 5, -38]} color="#dcfce7" intensity={isEvening ? 22 : 0} distance={55} decay={1.0} />
+        <pointLight position={[-38, 5, -38]} color="#dcfce7" intensity={isEvening ? 22 : 0} distance={55} decay={1.0} />
+      </group>
     </>
   );
 };
@@ -2225,9 +2791,9 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
         }}
         shadows={!isLiteMode}
       >
-        <color key={isEvening ? 'col-eve' : 'col-day'} attach="background" args={[isEvening ? '#010206' : '#87ceeb']} />
+        <color attach="background" args={[isEvening ? '#010206' : '#8fc0e8']} />
         {!isLiteMode && (
-          <fog key={isEvening ? 'fog-eve' : 'fog-day'} attach="fog" args={[isEvening ? '#010206' : '#bae6fd', isEvening ? 160 : 140, isEvening ? 680 : 780]} />
+          <fog attach="fog" args={[isEvening ? '#010206' : '#a8cde8', isEvening ? 160 : 140, isEvening ? 680 : 780]} />
         )}
 
         {/* Photorealistic Night Stadium Bloom & Post-processing */}

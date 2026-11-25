@@ -12,6 +12,9 @@ import { useT } from '../../i18n/useT';
 import { formatPrice } from '../../lib/money';
 import { isLowEndDevice } from '../../lib/device';
 import { SeatViewHeadControls } from './SeatViewHeadControls';
+import { ArrowLeft, ChevronRight, Sparkles, Armchair } from 'lucide-react';
+import venuesData from '../../data/venues.json';
+import { Venue } from '../../types';
 
 interface CinemaMap3DProps {
   sections: Section[];
@@ -661,6 +664,73 @@ const CinemaCameraRig: React.FC<{
   return null;
 };
 
+// ─── Ambience Screen Glow: Reaches front rows, floor, side acoustic panels with <5% slow sine variation ───
+const CinemaAmbienceGlow: React.FC<{ isSeatView: boolean; isLiteMode: boolean }> = ({ isSeatView, isLiteMode }) => {
+  const lightRefFront = useRef<THREE.SpotLight>(null);
+  const lightRefFloor = useRef<THREE.PointLight>(null);
+  const lightRefLeftPanel = useRef<THREE.PointLight>(null);
+  const lightRefRightPanel = useRef<THREE.PointLight>(null);
+
+  const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  useFrame((state) => {
+    // Under 5% brightness variation, slow sine at 0.75 rad/s (~0.12 Hz, strictly < 1 Hz).
+    // Steady 1.0 if prefers-reduced-motion or in Lite mode. No sudden changes or flicker.
+    const factor = (prefersReducedMotion || isLiteMode)
+      ? 1.0
+      : 1.0 + 0.038 * Math.sin(state.clock.elapsedTime * 0.75);
+
+    const baseFront = isSeatView ? 2.5 : 1.6;
+    const baseFloor = isSeatView ? 1.5 : 1.0;
+    const basePanel = isSeatView ? 1.7 : 1.2;
+
+    if (lightRefFront.current) lightRefFront.current.intensity = baseFront * factor;
+    if (lightRefFloor.current) lightRefFloor.current.intensity = baseFloor * factor;
+    if (lightRefLeftPanel.current) lightRefLeftPanel.current.intensity = basePanel * factor;
+    if (lightRefRightPanel.current) lightRefRightPanel.current.intensity = basePanel * factor;
+  });
+
+  return (
+    <group>
+      {/* 1. Forward wash onto audience and front rows */}
+      <spotLight
+        ref={lightRefFront}
+        position={[0, 4.3, -12.5]}
+        target-position={[0, 1.0, -3.0]}
+        angle={0.88}
+        penumbra={0.92}
+        color="#2dd4bf"
+        distance={24}
+        intensity={1.6}
+      />
+      {/* 2. Soft floor ambience wash */}
+      <pointLight
+        ref={lightRefFloor}
+        position={[0, 0.4, -6.5]}
+        color="#0ea5e9"
+        distance={16}
+        intensity={1.0}
+      />
+      {/* 3. Left acoustic panel wash (cosmic cyan/teal) */}
+      <pointLight
+        ref={lightRefLeftPanel}
+        position={[-11.2, 3.8, -8.0]}
+        color="#14b8a6"
+        distance={15}
+        intensity={1.2}
+      />
+      {/* 4. Right acoustic panel wash (warm amber from screen right) */}
+      <pointLight
+        ref={lightRefRightPanel}
+        position={[11.2, 3.8, -8.0]}
+        color="#f59e0b"
+        distance={15}
+        intensity={1.2}
+      />
+    </group>
+  );
+};
+
 // ─── Step 3: Pure Clean Movie Screen with Sharp Bezel & Cinematic Art ───
 const CleanCinematicScreen: React.FC = () => {
   const curveGeometry = useMemo(() => {
@@ -1280,15 +1350,24 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
   const {
     activeSeat,
     flyToSeat,
+    returnToOverview,
     cameraMode,
     setCameraMode,
     selectedSeats,
+    toggleSeat,
     getSoldSeatKeys,
     isLiteMode,
+    selectedVenueId,
+    setView,
   } = useBookingStore();
 
   const { language } = useT();
   const [hoveredSeat, setHoveredSeat] = useState<CinemaSeatInstance | null>(null);
+
+  const venues = venuesData as unknown as Venue[];
+  const currentVenue = venues.find((v) => v.id === selectedVenueId) || venues[1];
+  const chainName = currentVenue.chain || 'QFX Cinemas';
+  const hallName = currentVenue.name[language] || currentVenue.name.en;
 
   const soldKeys = useMemo(() => getSoldSeatKeys(), [getSoldSeatKeys]);
 
@@ -1424,8 +1503,125 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
   const targetLookAt = activeSeat ? activeSeat.cameraTarget : overviewTarget;
   const isSeatView = cameraMode === 'seatview';
 
+  // Best Available (1 to 8 contiguous seats in prime central rows)
+  const handleBestAvailable = (count: number = 2) => {
+    const rows = Array.from(new Set(seatsData.map((s) => s.row)));
+    const midIdx = Math.floor(rows.length * 0.5);
+    const sortedRows = [...rows].sort((a, b) => {
+      const distA = Math.abs(rows.indexOf(a) - midIdx);
+      const distB = Math.abs(rows.indexOf(b) - midIdx);
+      return distA - distB;
+    });
+
+    for (const r of sortedRows) {
+      const rowSeats = seatsData
+        .filter((s) => s.row === r)
+        .sort((a, b) => a.number - b.number);
+      
+      for (let i = 0; i <= rowSeats.length - count; i++) {
+        const candidateRun = rowSeats.slice(i, i + count);
+        const allAvailable = candidateRun.every(
+          (s) => !soldKeys.includes(`${s.row}-${s.number}`) && !selectedSeats.some((sel) => sel.sectionId === s.sectionId && `${sel.row}-${sel.number}` === `${s.row}-${s.number}`)
+        );
+        if (allAvailable) {
+          candidateRun.forEach((seat) => {
+            toggleSeat({
+              sectionId: seat.sectionId,
+              row: seat.row,
+              number: seat.number,
+              tier: seat.tier,
+              priceNPR: seat.priceNPR,
+            });
+          });
+          handleSeatClick(candidateRun[0]);
+          return;
+        }
+      }
+    }
+  };
+
   return (
     <div className="w-full h-full relative select-none">
+      {/* ─── CINEMA BREADCRUMB & BEST AVAILABLE CONTROLS ─── */}
+      <div className="absolute top-3 left-14 sm:left-44 right-3 sm:right-6 z-30 pointer-events-none flex items-center justify-between gap-2">
+        {/* Breadcrumb Navigation Pill */}
+        <nav
+          aria-label="Cinema Breadcrumb"
+          className="pointer-events-auto px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs text-white/90 shadow-2xl border border-white/15 bg-[#060810]/85 backdrop-blur-xl shrink overflow-x-auto no-scrollbar whitespace-nowrap"
+        >
+          {activeSeat && (
+            <button
+              onClick={returnToOverview}
+              className="p-1 -ml-1 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-all flex items-center justify-center mr-0.5 cursor-pointer"
+              title="Back to hall overview"
+              aria-label="Back to hall overview"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Level 1: Cinema */}
+          <button
+            onClick={() => setView('landing')}
+            className="font-medium text-white/60 hover:text-white transition-colors cursor-pointer"
+          >
+            {language === 'ne' ? 'सिनेमा' : 'Cinema'}
+          </button>
+
+          <ChevronRight className="w-3.5 h-3.5 text-white/30 shrink-0" />
+
+          {/* Level 2: Chain */}
+          <span className="font-medium text-white/80">
+            {chainName}
+          </span>
+
+          <ChevronRight className="w-3.5 h-3.5 text-white/30 shrink-0" />
+
+          {/* Level 3: Hall */}
+          <button
+            onClick={returnToOverview}
+            className={`font-semibold transition-colors hover:text-white cursor-pointer ${
+              !activeSeat ? 'text-amber-400 font-bold' : 'text-white/70'
+            }`}
+          >
+            {hallName}
+          </button>
+
+          {/* Level 4: Seat */}
+          {activeSeat && (
+            <>
+              <ChevronRight className="w-3.5 h-3.5 text-white/30 shrink-0" />
+              <span className="font-bold text-amber-400 flex items-center gap-1">
+                <Armchair className="w-3 h-3 text-amber-400" />
+                Row {activeSeat.row} · Seat {activeSeat.number}
+              </span>
+            </>
+          )}
+        </nav>
+
+        {/* Best Available Quick Picker (1 to 8 seats) */}
+        {!activeSeat && (
+          <div className="pointer-events-auto hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#060810]/85 border border-white/15 backdrop-blur-xl text-xs text-white shadow-xl">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="text-white/70">
+              {language === 'ne' ? 'उत्कृष्ट सिट:' : 'Best available:'}
+            </span>
+            <div className="flex items-center gap-1">
+              {[1, 2, 4].map((count) => (
+                <button
+                  key={count}
+                  onClick={() => handleBestAvailable(count)}
+                  className="px-2 py-0.5 rounded text-[11px] font-bold bg-white/10 hover:bg-amber-500 hover:text-slate-950 text-white transition-colors cursor-pointer"
+                  title={`Select ${count} best adjacent seat(s)`}
+                >
+                  {count} {count === 1 ? 'seat' : 'seats'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       <Canvas
         camera={{ position: overviewPos, fov: 46 }}
         className="w-full h-full"
@@ -1440,6 +1636,9 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
 
         {/* Automatic Resource Disposal on Unmount */}
         <CinemaSceneDisposer />
+
+        {/* Ambience Screen Glow (Front rows, acoustic side panels, floor with <5% slow sine variation) */}
+        <CinemaAmbienceGlow isSeatView={isSeatView} isLiteMode={isLiteMode} />
 
         {/* Ambient & General Illumination (Part 4: Enhanced visibility of all tiers) */}
         <ambientLight intensity={1.28} color="#cbd5e1" />
@@ -1578,6 +1777,22 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
               <p className="text-[9px] text-amber-300/80 uppercase tracking-wider font-semibold">
                 Click to view sightline
               </p>
+            </div>
+            {/* Sightline Perspective Preview */}
+            <div className="hidden sm:flex flex-col items-center pl-2 border-l border-white/10 shrink-0">
+              <div className="relative w-24 h-12 rounded-md overflow-hidden bg-[#04060a] border border-white/20 shadow-inner flex items-center justify-center">
+                {/* Curved screen glow simulation */}
+                <div 
+                  className="absolute top-1 w-20 h-4 rounded-t-full border-t-2 border-cyan-400 bg-gradient-to-b from-teal-500/40 to-transparent shadow-[0_0_8px_rgba(45,212,191,0.6)]"
+                  style={{
+                    transform: `perspective(60px) rotateX(15deg) translateX(${-(hoveredSeat.position[0] * 2.8)}px)`,
+                  }}
+                />
+                <div className="absolute bottom-1 w-6 h-1.5 rounded bg-amber-500/80 shadow-sm" />
+              </div>
+              <span className="text-[8px] text-white/50 mt-0.5 uppercase font-mono">
+                Sightline View
+              </span>
             </div>
           </div>
         </div>

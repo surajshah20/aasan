@@ -10,6 +10,8 @@ if (typeof window !== 'undefined') {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).__BOOKING_STORE__ = useBookingStore;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).useBookingStore = useBookingStore;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).__I18N_STORE__ = useI18nStore;
 }
 

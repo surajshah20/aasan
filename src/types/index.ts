@@ -52,6 +52,7 @@ export interface EventItem {
   category: 'cricket' | 'concert' | 'movie';
   dateISO: string;
   time: string;
+  showtimes?: string[];
   accentColor: string;
   hallName?: string;
 }

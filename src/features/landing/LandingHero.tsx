@@ -109,12 +109,19 @@ export const LandingHero: React.FC = () => {
           {/* Step 1 */}
           <div className="rounded-xl border border-white/10 bg-[#12141c]/50 p-4 flex flex-col h-full">
             <div className="h-44 sm:h-48 w-full rounded-lg overflow-hidden bg-black/40 mb-4 border border-white/5 shrink-0">
-              <img
-                src="/landing/step-1-stand.jpg"
-                alt="Pick a stand"
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+              <picture>
+                <source srcSet="/landing/step-1-stand.avif" type="image/avif" />
+                <source srcSet="/landing/step-1-stand.webp" type="image/webp" />
+                <img
+                  src="/landing/step-1-stand.jpg"
+                  alt="Step 1: Pick a stand"
+                  width="480"
+                  height="270"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
             </div>
             <div className="flex items-center gap-2 mb-1.5 shrink-0">
               <span className="text-xs font-mono font-bold text-[#dc143c]">01</span>
@@ -132,12 +139,19 @@ export const LandingHero: React.FC = () => {
           {/* Step 2 */}
           <div className="rounded-xl border border-white/10 bg-[#12141c]/50 p-4 flex flex-col h-full">
             <div className="h-44 sm:h-48 w-full rounded-lg overflow-hidden bg-black/40 mb-4 border border-white/5 shrink-0">
-              <img
-                src="/landing/step-2-block.jpg"
-                alt="Choose your block"
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+              <picture>
+                <source srcSet="/landing/step-2-block.avif" type="image/avif" />
+                <source srcSet="/landing/step-2-block.webp" type="image/webp" />
+                <img
+                  src="/landing/step-2-block.jpg"
+                  alt="Step 2: Choose your block"
+                  width="480"
+                  height="270"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
             </div>
             <div className="flex items-center gap-2 mb-1.5 shrink-0">
               <span className="text-xs font-mono font-bold text-[#dc143c]">02</span>
@@ -148,19 +162,26 @@ export const LandingHero: React.FC = () => {
             <p className="text-xs text-slate-400 leading-relaxed flex-grow">
               {language === 'ne'
                 ? 'कुन ब्लकबाट पिच कस्तो देखिन्छ र कति सिट उपलब्ध छन् हेर्नुहोस्।'
-                : 'Drill down into individual blocks (E1–E15) to inspect row availability.'}
+                : 'Drill down into individual blocks (P1, E1–E4) to inspect row availability.'}
             </p>
           </div>
 
           {/* Step 3 */}
           <div className="rounded-xl border border-white/10 bg-[#12141c]/50 p-4 flex flex-col h-full">
             <div className="h-44 sm:h-48 w-full rounded-lg overflow-hidden bg-black/40 mb-4 border border-white/5 shrink-0">
-              <img
-                src="/landing/step-3-seat.jpg"
-                alt="Sit in your seat"
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+              <picture>
+                <source srcSet="/landing/step-3-seat.avif" type="image/avif" />
+                <source srcSet="/landing/step-3-seat.webp" type="image/webp" />
+                <img
+                  src="/landing/step-3-seat.jpg"
+                  alt="Step 3: Sit in your seat"
+                  width="480"
+                  height="270"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
             </div>
             <div className="flex items-center gap-2 mb-1.5 shrink-0">
               <span className="text-xs font-mono font-bold text-[#dc143c]">03</span>
@@ -169,7 +190,9 @@ export const LandingHero: React.FC = () => {
               </h3>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed flex-grow">
-              Row K, Seat 6, NPR 650
+              {language === 'ne'
+                ? 'मुख्य प्याभिलियन — तल्लो · ब्लक P1 · पङ्क्ति A · सिट १ · रु १,२०० (भीआईपी)'
+                : 'Grand Pavilion — Lower · Block P1 · Row A · Seat 1 · NPR 1,200 (VIP)'}
             </p>
           </div>
         </div>
@@ -187,12 +210,19 @@ export const LandingHero: React.FC = () => {
           >
             {/* Background 3D screenshot evenly darkened, with no UI chrome */}
             <div className="absolute inset-0 pointer-events-none">
-              <img
-                src="/landing/stadium-card-bg.jpg"
-                alt="TU Cricket Ground 3D Canvas"
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+              <picture>
+                <source srcSet="/landing/stadium-card-bg.avif" type="image/avif" />
+                <source srcSet="/landing/stadium-card-bg.webp" type="image/webp" />
+                <img
+                  src="/landing/stadium-card-bg.jpg"
+                  alt="TU Cricket Ground 3D Canvas"
+                  width="600"
+                  height="450"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
               <div className="absolute inset-0 bg-[#0a0b10]/85" />
             </div>
 
@@ -255,12 +285,19 @@ export const LandingHero: React.FC = () => {
           >
             {/* Background 3D screenshot evenly darkened, with no UI chrome */}
             <div className="absolute inset-0 pointer-events-none">
-              <img
-                src="/landing/cinema-card-bg.jpg"
-                alt="Cinema 3D Auditorium Canvas"
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
+              <picture>
+                <source srcSet="/landing/cinema-card-bg.avif" type="image/avif" />
+                <source srcSet="/landing/cinema-card-bg.webp" type="image/webp" />
+                <img
+                  src="/landing/cinema-card-bg.jpg"
+                  alt="Cinema 3D Auditorium Canvas"
+                  width="600"
+                  height="450"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </picture>
               <div className="absolute inset-0 bg-[#0a0b10]/85" />
             </div>
 

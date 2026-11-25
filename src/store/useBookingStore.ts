@@ -26,10 +26,12 @@ interface BookingStoreState {
   lightingMode: 'evening' | 'day';
   toastMessage: string | null;
   bookingResult: Booking | null;
+  selectedShowtime: string | null;
   maxSeats: number;
 
   // Actions
   setView: (view: AppViewMode) => void;
+  setShowtime: (showtime: string) => void;
   selectVenue: (venueId: string, eventId?: string) => void;
   selectSection: (sectionId: string | null) => void;
   setHoveredSection: (sectionId: string | null) => void;
@@ -83,9 +85,11 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
   lightingMode: 'evening',
   toastMessage: null,
   bookingResult: null,
+  selectedShowtime: null,
   maxSeats: 8,
 
   setView: (view) => set({ currentView: view }),
+  setShowtime: (showtime) => set({ selectedShowtime: showtime }),
 
   setLightingMode: (mode) => set({ lightingMode: mode }),
 

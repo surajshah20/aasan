@@ -12,7 +12,8 @@ import {
   Clock,
   User,
   AlertTriangle,
-  RotateCcw
+  RotateCcw,
+  Ticket
 } from 'lucide-react';
 
 export const MockCheckout: React.FC = () => {
@@ -294,6 +295,31 @@ export const MockCheckout: React.FC = () => {
     setIsWalletModalOpen(false);
     completeBooking(newBooking);
   };
+
+  if (selectedSeats.length === 0) {
+    return (
+      <div className="min-h-[calc(100vh-65px)] max-w-lg mx-auto px-4 py-16 flex flex-col items-center justify-center text-center select-none">
+        <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-amber-400 mb-4 shadow-xl">
+          <Ticket className="w-8 h-8 opacity-70" />
+        </div>
+        <h2 className="text-lg font-bold text-white mb-2">
+          {language === 'ne' ? 'तपाईंको कार्ट खाली छ' : 'Your cart is empty'}
+        </h2>
+        <p className="text-xs text-slate-400 max-w-sm mb-6 leading-relaxed">
+          {language === 'ne'
+            ? 'तपाईंले कुनै सिट छान्नुभएको छैन वा तपाईंको सिट होल्ड समय सकिएको छ। कृपया ३D नक्साबाट सिट चयन गर्नुहोस्।'
+            : 'You haven’t selected any seats yet, or your reservation hold expired. Please choose seats from the venue map.'}
+        </p>
+        <button
+          onClick={() => setView('venue')}
+          className="px-6 py-2.5 rounded-full bg-crimson hover:bg-crimson-dark text-white text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>{language === 'ne' ? 'सिट चयनमा फर्कनुहोस्' : 'Select Seats from Map'}</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-65px)] max-w-4xl mx-auto px-4 sm:px-8 py-8 sm:py-10 select-none">

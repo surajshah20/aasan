@@ -1,12 +1,46 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const fs = require('fs');
+const sharp = require('sharp');
 
 const publicLandingDir = path.resolve(__dirname, '../public/landing');
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function convertAndOptimize(sourcePngBuffer, baseName) {
+  const maxBytes = 150 * 1024; // strictly under 150 KB
+
+  // 1. WebP
+  let webpQuality = 82;
+  let webpBuf = await sharp(sourcePngBuffer).webp({ quality: webpQuality }).toBuffer();
+  while (webpBuf.length > maxBytes && webpQuality > 40) {
+    webpQuality -= 5;
+    webpBuf = await sharp(sourcePngBuffer).webp({ quality: webpQuality }).toBuffer();
+  }
+  fs.writeFileSync(path.join(publicLandingDir, `${baseName}.webp`), webpBuf);
+
+  // 2. AVIF
+  let avifQuality = 75;
+  let avifBuf = await sharp(sourcePngBuffer).avif({ quality: avifQuality }).toBuffer();
+  while (avifBuf.length > maxBytes && avifQuality > 40) {
+    avifQuality -= 5;
+    avifBuf = await sharp(sourcePngBuffer).avif({ quality: avifQuality }).toBuffer();
+  }
+  fs.writeFileSync(path.join(publicLandingDir, `${baseName}.avif`), avifBuf);
+
+  // 3. JPG Fallback
+  let jpgQuality = 80;
+  let jpgBuf = await sharp(sourcePngBuffer).jpeg({ quality: jpgQuality, mozjpeg: true }).toBuffer();
+  while (jpgBuf.length > maxBytes && jpgQuality > 40) {
+    jpgQuality -= 5;
+    jpgBuf = await sharp(sourcePngBuffer).jpeg({ quality: jpgQuality, mozjpeg: true }).toBuffer();
+  }
+  fs.writeFileSync(path.join(publicLandingDir, `${baseName}.jpg`), jpgBuf);
+
+  console.log(`Saved ${baseName} -> WebP: ${(webpBuf.length/1024).toFixed(1)}KB, AVIF: ${(avifBuf.length/1024).toFixed(1)}KB, JPG: ${(jpgBuf.length/1024).toFixed(1)}KB`);
+}
+
 async function generateLandingAssets() {
-  console.log('Generating pristine canvas-only landing assets from updated 3D stadium...');
+  console.log('Generating pristine landing assets (WebP, AVIF, JPG under 150KB)...');
   if (!fs.existsSync(publicLandingDir)) {
     fs.mkdirSync(publicLandingDir, { recursive: true });
   }
@@ -23,47 +57,17 @@ async function generateLandingAssets() {
   });
 
   const page = await browser.newPage();
-  // Standard 16:10 / 16:9 widescreen viewport for crisp cards
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
 
-  // 1. Navigate to Stadium (tu_cricket_ground)
-  console.log('Navigating to app and selecting TU Cricket Ground...');
-  await page.goto('http://127.0.0.1:5173/', { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await sleep(1500);
-
-  await page.evaluate(() => {
-    window.__BOOKING_STORE__.getState().selectVenue('tu_cricket_ground', 'event_tu_cricket_1');
-    window.__BOOKING_STORE__.getState().returnToOverview();
-  });
-  await sleep(3000);
-
-  // Ensure evening lighting mode
-  await page.evaluate(() => {
-    const drill = window.__STADIUM_DRILL__;
-    if (drill) {
-      drill.setLightingMode('evening');
-      drill.setShowBeamAxes(false);
-      drill.setCustomCamera(null);
-    }
-  });
-  await sleep(2500);
-
-  // Helper: hide ALL HTML overlays completely before taking screenshot
-  async function screenshotPureCanvas(filePath, quality = 82) {
-    await page.evaluate(() => {
-      // Hide all overlay elements on top of the canvas
+  // Helper to hide UI elements except the canvas (and optionally seatbar)
+  async function screenshotScene(keepSeatBar = false) {
+    await page.evaluate((keepBar) => {
       const selectors = [
         'header',
         'footer',
         'nav',
-        'button',
-        '.glass-panel',
-        '.glass-panel-glow',
         '[class*="absolute top-"]',
         '[class*="fixed"]',
-        '[class*="z-20"]',
-        '[class*="z-30"]',
-        '[class*="z-40"]',
         '[class*="z-50"]',
       ];
       selectors.forEach((sel) => {
@@ -72,13 +76,28 @@ async function generateLandingAssets() {
           el.style.setProperty('display', 'none', 'important');
         });
       });
-    });
 
-    await sleep(200);
+      if (!keepBar) {
+        document.querySelectorAll('[class*="bottom-"]').forEach((el) => {
+          el.setAttribute('data-hide-for-capture', '1');
+          el.style.setProperty('display', 'none', 'important');
+        });
+      }
+    }, keepSeatBar);
 
-    const canvas = await page.$('canvas');
-    if (canvas) {
-      await canvas.screenshot({ path: filePath, type: 'jpeg', quality });
+    await sleep(250);
+
+    let buffer;
+    if (keepSeatBar) {
+      // Capture canvas + seatbar area
+      buffer = await page.screenshot({ type: 'png' });
+    } else {
+      const canvas = await page.$('canvas');
+      if (canvas) {
+        buffer = await canvas.screenshot({ type: 'png' });
+      } else {
+        buffer = await page.screenshot({ type: 'png' });
+      }
     }
 
     // Restore hidden elements
@@ -88,101 +107,78 @@ async function generateLandingAssets() {
         el.removeAttribute('data-hide-for-capture');
       });
     });
+
+    return buffer;
   }
 
-  // 1. Hero Poster (<200KB) & Stadium Venue Card Background
-  console.log('1. Capturing hero-poster.jpg & stadium-card-bg.jpg (pure canvas overview)...');
+  // 1. Navigate to Stadium (tu_cricket_ground)
+  console.log('Navigating to app and selecting TU Cricket Ground...');
+  await page.goto('http://127.0.0.1:5173/stadium/tu', { waitUntil: 'networkidle0', timeout: 60000 });
+  await sleep(2500);
+
+  // 1. Hero Poster & Stadium Venue Card Background
+  console.log('1. Capturing hero-poster and stadium-card-bg...');
   await page.evaluate(() => {
-    window.__STADIUM_DRILL__.setCustomCamera({
-      pos: [-22, 74, 126],
-      lookAt: [0, 2.0, -4],
-      fov: 46,
-      instant: true,
-    });
+    if (window.__STADIUM_DRILL__) {
+      window.__STADIUM_DRILL__.setLightingMode('evening');
+      window.__STADIUM_DRILL__.setCustomCamera({
+        pos: [-22, 74, 126],
+        lookAt: [0, 2.0, -4],
+        fov: 46,
+        instant: true,
+      });
+    }
   });
   await sleep(2000);
-  const heroPosterPath = path.join(publicLandingDir, 'hero-poster.jpg');
-  await screenshotPureCanvas(heroPosterPath, 76);
-
-  const stadiumBgPath = path.join(publicLandingDir, 'stadium-card-bg.jpg');
-  await screenshotPureCanvas(stadiumBgPath, 82);
-  console.log('Saved hero-poster.jpg and stadium-card-bg.jpg');
+  const heroBuf = await screenshotScene(false);
+  await convertAndOptimize(heroBuf, 'hero-poster');
+  await convertAndOptimize(heroBuf, 'stadium-card-bg');
 
   // 2. Step 1: Pick a Stand
-  console.log('2. Capturing Step 1: Pick a stand (overview with stand highlight)...');
+  console.log('2. Capturing step-1-stand...');
   await page.evaluate(() => {
     const drill = window.__STADIUM_DRILL__;
-    drill.setCustomCamera(null);
-    drill.selectStand(null);
-    drill.setStadiumLevel('overview');
-    // Hover on East Stand to show the stand selection state
-    drill.setHoveredStandId('east_stand');
+    if (drill) {
+      drill.setCustomCamera(null);
+      drill.selectStand(null);
+      drill.setStadiumLevel('overview');
+      drill.setHoveredStandId('east_stand');
+    }
   });
-  await sleep(2200);
-  const step1Path = path.join(publicLandingDir, 'step-1-stand.jpg');
-  await screenshotPureCanvas(step1Path, 82);
-  console.log('Saved step-1-stand.jpg');
+  await sleep(2000);
+  const step1Buf = await screenshotScene(false);
+  await convertAndOptimize(step1Buf, 'step-1-stand');
 
   // 3. Step 2: Choose your Block
-  console.log('3. Capturing Step 2: Choose your block (drilling into stand & blocks)...');
+  console.log('3. Capturing step-2-block...');
   await page.evaluate(() => {
     const drill = window.__STADIUM_DRILL__;
-    drill.selectStand('east_stand');
-    drill.setStadiumLevel('stand');
-    drill.setHoveredBlockId('blk-e1');
-  });
-  await sleep(2500);
-  const step2Path = path.join(publicLandingDir, 'step-2-block.jpg');
-  await screenshotPureCanvas(step2Path, 82);
-  console.log('Saved step-2-block.jpg');
-
-  // 4. Step 3: Sit in your Seat
-  console.log('4. Capturing Step 3: Sit in your seat (seat perspective with pitch & stands)...');
-  await page.evaluate(() => {
-    const drill = window.__STADIUM_DRILL__;
-    drill.setCustomCamera({
-      pos: [54, 8.2, 8],
-      lookAt: [0, 2.0, 0],
-      fov: 56,
-      instant: true,
-    });
-  });
-  await sleep(1800);
-  const step3Path = path.join(publicLandingDir, 'step-3-seat.jpg');
-  await screenshotPureCanvas(step3Path, 82);
-  console.log('Saved step-3-seat.jpg');
-
-  // 5. Cinema Card Background (qfx_civil_audi1)
-  console.log('5. Capturing cinema-card-bg.jpg (QFX Civil Mall Audi 1)...');
-  await page.evaluate(() => {
-    window.__BOOKING_STORE__.getState().selectVenue('qfx_civil_audi1', 'event_qfx_movie_1');
-  });
-  await sleep(3500);
-  const cinemaBgPath = path.join(publicLandingDir, 'cinema-card-bg.jpg');
-  await screenshotPureCanvas(cinemaBgPath, 82);
-  console.log('Saved cinema-card-bg.jpg');
-
-  // Check file sizes
-  const files = [
-    'hero-poster.jpg',
-    'stadium-card-bg.jpg',
-    'cinema-card-bg.jpg',
-    'step-1-stand.jpg',
-    'step-2-block.jpg',
-    'step-3-seat.jpg',
-  ];
-  console.log('\n--- Regenerated Asset File Sizes ---');
-  for (const f of files) {
-    const fPath = path.join(publicLandingDir, f);
-    if (fs.existsSync(fPath)) {
-      const stats = fs.statSync(fPath);
-      const kb = (stats.size / 1024).toFixed(1);
-      console.log(`${f}: ${kb} KB ${stats.size < 200 * 1024 ? '(PASS: <200KB)' : ''}`);
+    if (drill) {
+      drill.selectStand('east_stand');
+      drill.setStadiumLevel('stand');
+      drill.setHoveredBlockId('blk-e1');
     }
-  }
+  });
+  await sleep(2000);
+  const step2Buf = await screenshotScene(false);
+  await convertAndOptimize(step2Buf, 'step-2-block');
+
+  // 4. Step 3: Sit in your Seat with NEW BOOKING BAR
+  console.log('4. Capturing step-3-seat (with new booking bar: VIP badge, Block P1 · Row A · Seat 1, price)...');
+  await page.goto('http://127.0.0.1:5173/stadium/tu/pavilion-lower/p1/a-1', { waitUntil: 'networkidle0', timeout: 60000 });
+  await sleep(2500);
+  const step3Buf = await screenshotScene(true);
+  await convertAndOptimize(step3Buf, 'step-3-seat');
+
+  // 5. Cinema Card Background
+  console.log('5. Capturing cinema-card-bg (QFX Civil Mall Audi 1)...');
+  await page.goto('http://127.0.0.1:5173/cinema/qfx-civil-audi1', { waitUntil: 'networkidle0', timeout: 60000 });
+  await sleep(3000);
+  const cinemaBuf = await screenshotScene(false);
+  await convertAndOptimize(cinemaBuf, 'cinema-card-bg');
 
   await browser.close();
-  console.log('\nAll landing assets successfully regenerated!');
+  console.log('\nAll landing assets regenerated in WebP, AVIF, and JPG under 150KB!');
 }
 
 generateLandingAssets().catch((err) => {

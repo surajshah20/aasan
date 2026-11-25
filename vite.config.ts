@@ -7,9 +7,19 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'three-vendor': ['three', '@react-three/fiber', '@react-three/drei'],
-          'ui-vendor': ['framer-motion', 'lucide-react', 'qrcode.react', 'canvas-confetti'],
+        manualChunks(id) {
+          if (id.includes('node_modules/three') || id.includes('@react-three')) {
+            return 'three-vendor';
+          }
+          if (id.includes('node_modules/jspdf') || id.includes('node_modules/html2canvas')) {
+            return 'pdf-vendor';
+          }
+          if (id.includes('node_modules/framer-motion')) {
+            return 'motion-vendor';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'icons-vendor';
+          }
         },
       },
     },

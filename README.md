@@ -8,66 +8,73 @@
 
 ---
 
-## 🎨 Brand Identity (Option A: The Perspective Seat)
-- **Symbol**: A geometric front-facing seat with a Nepal crimson backrest (`#dc143c`), white cushion base and armrests, and a dotted sightline ray leading to an elevated viewpoint dot—symbolizing "See your seat before you book."
-- **Typography**: Geometric modern wordmark outlined from *Outfit Bold* paired with clean Devanagari *आसन* from *Noto Sans Devanagari*.
-- **Color Palette**: Nepal Crimson (`#dc143c`), Off-White (`#ffffff`), and Deep Night (`#0a0b10`).
-- **Assets**:
-  - Dark Lockup: [`public/brand/logo.svg`](public/brand/logo.svg)
-  - Light Lockup: [`public/brand/logo-light.svg`](public/brand/logo-light.svg)
-  - Symbol: [`public/brand/symbol.svg`](public/brand/symbol.svg)
-  - Favicon: [`public/favicon.svg`](public/favicon.svg)
+## 🎨 Brand Identity
+- **Symbol**: A modern geometric front-facing seat with a Nepal crimson backrest (`#dc143c`), crisp white cushion base and armrests, and an upward sightline ray pointing to an elevated perspective dot—symbolizing *"See your seat before you book."*
+- **Typography**: Geometric modern wordmark set in *Outfit Bold* paired with clean Devanagari *आसन* set in *Noto Sans Devanagari*.
+- **Palette**: Nepal Crimson (`#dc143c`), Off-White (`#f8fafc`), and Deep Night (`#0a0b10`).
+- **Brand Assets**:
+  - Dark Header Lockup: [`public/brand/logo.svg`](public/brand/logo.svg)
+  - Light Document Lockup: [`public/brand/logo-light.svg`](public/brand/logo-light.svg)
+  - Standalone Symbol: [`public/brand/symbol.svg`](public/brand/symbol.svg)
+  - Multi-resolution Favicons: [`public/favicon.svg`](public/favicon.svg), [`public/favicon-32x32.png`](public/favicon-32x32.png), [`public/apple-touch-icon.png`](public/apple-touch-icon.png)
+  - OpenGraph Preview Card: [`public/og-image.png`](public/og-image.png)
 
 ---
 
 ## ⚠️ Demo Concept & Disclaimer
 **DEMO CONCEPT ONLY.** All venue names, cinema chains, event details, movie titles, seating counts, layouts, prices, and showtimes are placeholder demo data.
-- Not affiliated with, endorsed by, or partnered with Tribhuvan University Cricket Ground, QFX Cinemas, Civil Mall, CK Cinemas, FCube Cinemas, Big Movies, or any ticketing agency.
-- All payment gateways (eSewa, Khalti, Fonepay, IME Pay) are **simulated mock interfaces**. No real personal data or payment credentials are taken or processed.
-- Sponsor boards: demo placements (including partner branding like Blushbook).
+- Not affiliated with, endorsed by, or partnered with Tribhuvan University Cricket Ground, Cricket Association of Nepal (CAN), QFX Cinemas, Civil Mall, CK Cinemas, FCube Cinemas, Big Movies, One Cinemas, or any ticketing agency.
+- All payment gateways (**eSewa**, **Khalti**, **Fonepay**, **IME Pay**) are **simulated mock interfaces**. No real personal data or payment credentials are taken or processed.
+- All digital tickets generated are marked **"DEMO — not valid for entry"**.
 
 ---
 
 ## ✨ Features
 1. **Interactive 3D Venue Overview**:
-   - Dark luxury aesthetic with Nepal crimson (`#DC143C`) and deep blue (`#003893`) atmospheric glows.
-   - Dynamic 3D top-down view of **QFX Cinemas (Civil Mall)**, **Tribhuvan University International Cricket Ground (Kirtipur)**, and multiple cinema halls.
-   - Hover on any section to see real-time price (`from रू X`), seat availability, and tier info.
-2. **Smooth 1.5s Fly-In Seat View**:
-   - Camera smoothly transitions from overhead map into the exact eye-level perspective from that section.
-   - Cinema: Orientated directly facing the curved screen with ambient auditorium illumination.
-   - Stadium: Elevated view over the pitch center, wickets, and inner circle.
+   - Dynamic 3D models of **Tribhuvan University International Cricket Ground (Kirtipur)** and multiple **Cinema Auditoriums** (QFX, Big Movies, CK, FCube, etc.).
+   - Day and Night mode toggles with realistic galvanized steel floodlight towers, pale glass lamp lenses, procedural turf variation, and drifting cumulus clouds.
+   - Real-time hover preview displaying pricing (`from रू X`), seat availability, and tier breakdown.
+2. **Smooth 1.5s Fly-In Seat Sightline**:
+   - Smooth lerped camera rig swoops from aerial perspective down to the exact eye-level viewpoint of any selected seat.
+   - Stadium: Elevated view directly over the pitch center, wickets, and inner circle.
+   - Cinema: Accurate sightlines facing the curved silver screen with reactive ambient lighting wash.
 3. **Interactive Seat Picker & Sticky Cart**:
-   - Distinct accessible states: Available, Selected, Sold out, and Wheelchair accessible (utilizing distinct iconography, not color alone).
-   - Real-time seat tally (1 to 8 seat limit enforced).
-   - Live total in NPR / रू.
-4. **Mock Digital Wallet Checkout**:
-   - Simulated payment flows for **eSewa**, **Khalti**, **Fonepay**, and **IME Pay**.
-   - Interactive success and failure paths with processing states.
-5. **Digital QR Ticket**:
-   - High-fidelity dark pass card with booking reference (`ASN-XXXXXX`), verified QR code, seat breakdown, and print / save support.
-   - Celebratory confetti on confirmation.
-6. **Graceful Fallbacks & Dual-Language**:
-   - **Lite Mode (2D)**: Interactive vector SVG map for low-end devices or environments without WebGL.
-   - **Full Bilingual Support**: Instant toggle between English and Nepali (नेपाली) across all views and UI elements.
+   - Individual seat selection (enforced 1 to 8 seat booking limit).
+   - High-contrast states for Available, Selected, Sold out, and Wheelchair accessible.
+   - Multi-stand cart chips (`P1 · A1`, `East · A1`) with quick removal and price calculation in NPR (रू).
+4. **Cinematic Hall Polish & Ambience Glow**:
+   - Screen illumination reflecting dominant video colors across front rows, acoustic wall treatments, and floor carpeting.
+   - Subtle, slow brightness variations (<5%, <1 Hz) respecting `prefers-reduced-motion` and Lite mode.
+   - Best-available quick seat selector (1 to 8 contiguous seats in central rows).
+5. **Simulated Payment Gateways & Timer Hold**:
+   - 5-minute seat reservation countdown timer with warning state and automatic cart release upon expiry.
+   - Realistic Nepali wallet modals for **eSewa**, **Khalti**, **Fonepay**, and **IME Pay** with test success and failure paths.
+6. **Digital Pass & Multi-Seat Ticket Exports**:
+   - Unwrapping-proof monospace Booking ID (`ASN-XXXXXX`) with one-click clipboard copy.
+   - Dedicated QR code generated per booked seat in an interactive carousel grid.
+   - High-fidelity **PDF Export** (vector A4 with embedded Devanagari font) and **PNG Pass Export** (1200px wide).
+7. **Performance & Universal Accessibility**:
+   - Initial gzipped bundle < 35 KB; code-split 3D scenes, checkout, and PDF generator.
+   - Automatic 2D SVG Accessible Mode for low-end hardware or WebGL context recovery.
+   - Full bilingual support (English and नेपाली) across all routes and dialogs.
 
 ---
 
 ## 🛠️ Tech Stack
-- **Build**: Vite + React 18 + TypeScript (strict)
+- **Framework**: Vite + React 18 + TypeScript (strict)
 - **Styling**: Tailwind CSS
 - **3D Graphics**: Three.js, `@react-three/fiber`, `@react-three/drei`
-- **Animation**: Framer Motion
-- **State Management**: Zustand
-- **QR Code**: `qrcode.react`
-- **Icons**: Lucide React
+- **State & Routing**: Zustand (atomic store + deep-link URL synchronization)
+- **Animation**: Framer Motion & Canvas Confetti
+- **Document Generation**: jsPDF (vector tickets) & qrcode.react
+- **Testing**: Playwright (E2E) & Axe-Core (Automated WCAG 2.1 A/AA)
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v18+ recommended)
+- Node.js (v18 or higher recommended)
 - npm or pnpm
 
 ### Installation
@@ -79,41 +86,110 @@ npm install
 ```bash
 npm run dev
 ```
+Open `http://localhost:5173` in your browser.
 
-### Production Build & Preview
-```bash
-npm run build
-npm run preview
-```
+### Available Scripts
+- `npm run dev`: Starts local Vite development server with HMR.
+- `npm run build`: Type-checks and creates an optimized production bundle in `dist/`.
+- `npm run preview`: Previews the production build locally.
+- `npm run test:e2e`: Executes Playwright end-to-end journey tests.
+- `npm run test:perf`: Runs headless frame rate and draw-call benchmark script.
+- `npm run test:a11y`: Executes automated Axe WCAG accessibility audit.
 
 ---
 
 ## 📁 Project Structure
 ```
-src/
-  ├── components/       # UI building blocks (Header, Footer, Badges)
-  ├── features/
-  │   ├── landing/      # Cinematic Hero with dual language & venue selectors
-  │   ├── venue/        # 3D Cinema/Stadium map, 2D SVG fallback, VenueOverview
-  │   ├── seats/        # Interactive seat grid, tier rules, sticky cart bar
-  │   ├── checkout/     # Mock eSewa, Khalti, Fonepay, IME Pay wallets
-  │   └── ticket/       # Digital pass card with QR code & download
-  ├── data/             # venues.json, events.json, sold-seats.json (mock data)
-  ├── i18n/             # en.json, ne.json, useT() hook
-  ├── lib/              # money.ts (NPR formatting), device.ts (WebGL/low-end detection)
-  ├── store/            # useBookingStore.ts
-  └── types/            # TypeScript interfaces
+Aasan/
+├── public/
+│   ├── brand/            # SVG logos, wordmarks, and app symbols
+│   ├── images/           # Landing hero, feature cards, and venue previews (.webp, .avif, .jpg)
+│   ├── favicon.svg       # Vector browser favicon
+│   ├── favicon-32x32.png # Standard desktop favicon
+│   ├── og-image.png      # 1200x630 social sharing card
+│   ├── robots.txt        # Crawler index directives
+│   ├── sitemap.xml       # Dynamic site map
+│   └── site.webmanifest  # Progressive web app manifest
+├── src/
+│   ├── components/       # Header, Footer, LanguageToggle, Badges
+│   ├── features/
+│   │   ├── landing/      # Responsive landing page, hero, venue cards, feature highlights
+│   │   ├── venue/        # StadiumMap3D, CinemaMap3D, AccessibleMap2D, VenueOverview
+│   │   ├── seats/        # SeatPicker, SeatBookingBar, CartBar
+│   │   ├── checkout/     # MockCheckout, BuyerDetailsForm, WalletModals
+│   │   └── ticket/       # TicketView, TicketPDF, ticketGenerator.ts
+│   ├── data/
+│   │   ├── venues.json   # Stadium & cinema layouts, tiers, blocks, capacities
+│   │   ├── events.json   # Matches, movies, showtimes, base pricing
+│   │   └── sold-seats.json # Mock occupied seats across dates
+│   ├── i18n/             # en.json, ne.json, useT() hook
+│   ├── lib/              # money.ts (NPR formatting), urlRouting.ts, device.ts
+│   ├── store/            # useBookingStore.ts (Zustand state engine)
+│   └── types/            # TypeScript data contracts and interfaces
+├── e2e/                  # Playwright end-to-end user journey tests
+└── scripts/              # Performance, asset generation, and audit scripts
 ```
 
 ---
 
-## 📋 What is Simulated vs What is Next
-| Feature | Status | Notes |
-|---|---|---|
-| 3D Stadium & Cinema Fly-in | ✅ Active | Real-time WebGL rendering with smooth lerped camera rig |
-| 2D SVG Fallback & Lite Mode | ✅ Active | Automatically activates on low hardware or manual toggle |
-| Language Switcher | ✅ Active | Complete English and Nepali translations |
-| Seat Picking & Cart | ✅ Active | 1-8 seat rules, sold states, live pricing in NPR |
-| Payment Gateways | 🧪 Simulated | Fake approval/failure tests for eSewa, Khalti, Fonepay, IME Pay |
-| Real-time inventory | 🔮 Future | Requires backend WebSocket / database sync |
-| Official venue partnership | 🔮 Future | Awaiting commercial agreements & stadium 3D scans |
+## ⚙️ Data Files & Customization
+
+### 1. Modifying Venues (`src/data/venues.json`)
+Each venue entry defines its geometry mode (`stadium` or `cinema`), total capacity, and sections/stands.
+```json
+{
+  "id": "tu_cricket_ground",
+  "name": "TU International Cricket Ground",
+  "city": "Kirtipur, Kathmandu Valley",
+  "type": "stadium",
+  "sections": [
+    {
+      "id": "tu_pavilion_end",
+      "name": "Grand Pavilion — Lower",
+      "capacity": 1800,
+      "tier": "VIP",
+      "basePriceNPR": 1200
+    }
+  ]
+}
+```
+
+### 2. Modifying Events & Showtimes (`src/data/events.json`)
+Add matches or movie screenings, along with showtimes and dates:
+```json
+{
+  "id": "event_tu_cricket_1",
+  "venueId": "tu_cricket_ground",
+  "title": "Nepal vs Netherlands — T20 Tri-Series Final",
+  "titleNe": "नेपाल वि विरुद्ध नेदरल्यान्ड्स — टी-२० त्रिकोणीय श्रृंखला फाइनल",
+  "date": "2026-11-28",
+  "time": "13:15",
+  "showtimes": ["01:15 PM"]
+}
+```
+
+### 3. Modifying Sponsor Perimeter Boards
+In `src/features/venue/StadiumMap3D.tsx`, the `SPONSORS` array controls stadium perimeter board signage:
+```ts
+const SPONSORS = ['Aasan आसन', 'eSewa', 'Khalti', 'Blushbook', 'Nepal Cricket'];
+```
+
+---
+
+## 💳 Real Payment Gateway Integration Guide
+To transition this demo into production, replace the simulated wallet modals in `src/features/checkout/MockCheckout.tsx` with verified gateway integrations:
+
+1. **eSewa EPAY v2 Integration**:
+   - Generate HMAC-SHA256 signature using `SecretKey`, `total_amount`, `transaction_uuid`, and `product_code`.
+   - Submit form POST to `https://epay.esewa.com.np/api/epay/main/v2/form`.
+   - Implement server webhook verification endpoint receiving `encoded_response` base64 payload.
+2. **Khalti ePayment v2**:
+   - Initiate payment via `POST https://a.khalti.com/api/v2/epayment/initiate/` with `Authorization: Key <secret_key>`, providing `return_url`, `website_url`, `amount`, and `purchase_order_id`.
+   - Redirect buyer to returned `payment_url`.
+   - Verify transaction state on return callback via `POST /api/v2/epayment/lookup/`.
+3. **Fonepay Merchant Dynamic QR**:
+   - Request dynamic QR string via Fonepay Merchant API with invoice number and exact NPR amount.
+   - Render dynamic QR on checkout screen with polling WebSocket listener awaiting terminal credit notification.
+4. **IME Pay Web Checkout**:
+   - Call IME Pay Token Generation endpoint with merchant code and transaction ID.
+   - Post to IME Pay checkout portal and handle asynchronous server-to-server IPN (Instant Payment Notification).

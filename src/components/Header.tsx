@@ -15,6 +15,7 @@ export const Header: React.FC = () => {
     toggleLiteMode, 
     selectedVenueId, 
     selectedEventId, 
+    selectedShowtime,
     bookingResult 
   } = useBookingStore();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -92,7 +93,7 @@ export const Header: React.FC = () => {
     }
 
     // 3. Time string
-    let timeStr = (currentEvent.time || '1:15 PM').trim();
+    let timeStr = (selectedShowtime || currentEvent.time || '1:15 PM').trim();
     if (timeStr.startsWith('0')) {
       timeStr = timeStr.substring(1);
     }

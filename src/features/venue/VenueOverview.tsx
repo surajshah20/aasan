@@ -7,17 +7,20 @@ import { SeatPicker } from '../seats/SeatPicker';
 import { SeatViewBar } from './SeatViewBar';
 import { formatPrice } from '../../lib/money';
 import { Venue } from '../../types';
+import eventsData from '../../data/events.json';
+import { EventItem } from '../../types';
 import { 
   ArrowLeft, 
   Eye, 
   Sparkles, 
-  Loader2, 
   Ticket, 
   ArrowRight, 
   X, 
   ShieldCheck,
-  Info
+  Info,
+  Clock
 } from 'lucide-react';
+import { Branded3DLoader, WebGLContextLostFallback, NotFoundState, OfflineBanner } from './VenueStatusFallback';
 
 const CinemaMap3D = lazy(() => import('./CinemaMap3D').then((m) => ({ default: m.CinemaMap3D })));
 const StadiumMap3D = lazy(() => import('./StadiumMap3D').then((m) => ({ default: m.StadiumMap3D })));
@@ -26,6 +29,9 @@ export const VenueOverview: React.FC = () => {
   const { t, language } = useT();
   const {
     selectedVenueId,
+    selectedEventId,
+    selectedShowtime,
+    setShowtime,
     activeSectionId,
     activeSeat,
     cameraMode,
@@ -41,9 +47,52 @@ export const VenueOverview: React.FC = () => {
   const [hintVisible, setHintVisible] = useState(true);
   const [showInfoPopover, setShowInfoPopover] = useState(false);
   const [showAutoSuggest2D, setShowAutoSuggest2D] = useState(false);
+  const [webglLost, setWebglLost] = useState(false);
+  const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
 
   const venues = venuesData as unknown as Venue[];
-  const currentVenue = venues.find((v) => v.id === selectedVenueId) || venues[0];
+  const currentVenue = venues.find((v) => v.id === selectedVenueId);
+
+  const events = eventsData as unknown as EventItem[];
+  const activeEvent = events.find((e) => e.id === selectedEventId) || (currentVenue ? events.find((e) => e.venueId === currentVenue.id) : null) || events[0];
+
+  // Listen to network status
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Listen to WebGL context loss
+  useEffect(() => {
+    const handleContextLost = (e: Event) => {
+      e.preventDefault();
+      setWebglLost(true);
+    };
+    const handleContextRestored = () => {
+      setWebglLost(false);
+    };
+
+    window.addEventListener('webglcontextlost', handleContextLost);
+    window.addEventListener('webglcontextrestored', handleContextRestored);
+    return () => {
+      window.removeEventListener('webglcontextlost', handleContextLost);
+      window.removeEventListener('webglcontextrestored', handleContextRestored);
+    };
+  }, []);
+
+  if (!currentVenue) {
+    return (
+      <div className="w-full h-full">
+        <NotFoundState onBackToVenues={() => setView('landing')} />
+      </div>
+    );
+  }
 
   const activeSection = currentVenue.sections.find((s) => s.id === activeSectionId);
   const isInSeatView = !!activeSeat;
@@ -255,10 +304,48 @@ export const VenueOverview: React.FC = () => {
         </div>
       )}
 
+      {/* Floating Showtime Picker for Cinemas in Overview */}
+      {currentVenue.type === 'cinema' && !isInSeatView && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-auto animate-fadeIn select-none">
+          <div className="px-3 py-1.5 rounded-full bg-[#060810]/85 backdrop-blur-xl border border-white/15 text-xs text-white/90 shadow-2xl flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="text-[11px] font-medium text-white/60">
+              {language === 'ne' ? 'शो समय:' : 'Showtime:'}
+            </span>
+            <div className="flex items-center gap-1">
+              {(activeEvent.showtimes || ['11:15 AM', '02:45 PM', '06:30 PM', '09:30 PM']).map((st) => {
+                const isActive = (selectedShowtime || activeEvent.time) === st;
+                return (
+                  <button
+                    key={st}
+                    onClick={() => setShowtime(st)}
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-semibold transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-amber-500 text-slate-950 shadow-md font-bold'
+                        : 'bg-white/10 hover:bg-white/20 text-slate-200'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main 3D / 2D Canvas Area (100% of remaining viewport) */}
       <div className="relative w-full h-full">
-        {/* 2D Fallback for Lite Mode */}
-        {isLiteMode ? (
+        {/* WebGL Context Lost Fallback Screen */}
+        {webglLost ? (
+          <WebGLContextLostFallback
+            onReload={() => setWebglLost(false)}
+            onSwitchTo2D={() => {
+              setLiteMode(true);
+              setWebglLost(false);
+            }}
+          />
+        ) : isLiteMode ? (
           <div className="w-full h-full overflow-y-auto pb-12 pt-14">
             <VenueMap2D
               type={currentVenue.type}
@@ -275,17 +362,8 @@ export const VenueOverview: React.FC = () => {
             )}
           </div>
         ) : (
-          /* Standard 100% 3D Viewport */
-          <Suspense
-            fallback={
-              <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-[#08090f]">
-                <Loader2 className="w-8 h-8 text-crimson animate-spin" />
-                <p className="text-xs text-muted font-medium tracking-wide">
-                  {language === 'ne' ? '३D सिट नक्सा लोड हुँदैछ...' : 'Initializing 3D Venue View...'}
-                </p>
-              </div>
-            }
-          >
+          /* Standard 100% 3D Viewport with Real Branded Progress Loader */
+          <Suspense fallback={<Branded3DLoader onSwitchTo2D={() => setLiteMode(true)} />}>
             {currentVenue.type === 'cinema' ? (
               <CinemaMap3D
                 sections={currentVenue.sections}
@@ -373,6 +451,9 @@ export const VenueOverview: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Offline banner */}
+      {isOffline && <OfflineBanner onRetry={() => window.location.reload()} />}
     </div>
   );
 };

@@ -28,6 +28,20 @@ export const SeatPicker: React.FC<SeatPickerProps> = ({
   const soldKeys = getSoldSeatKeys();
   const startLetterCode = (section.startRowLetter || 'A').charCodeAt(0);
 
+  const isSectionSoldOut = React.useMemo(() => {
+    const total = section.rows * section.seatsPerRow;
+    let sold = 0;
+    for (let r = 0; r < section.rows; r++) {
+      const rowLetter = String.fromCharCode(startLetterCode + r);
+      for (let s = 1; s <= section.seatsPerRow; s++) {
+        if (soldKeys.includes(`${rowLetter}-${s}`)) {
+          sold++;
+        }
+      }
+    }
+    return total > 0 && sold >= total;
+  }, [section, soldKeys, startLetterCode]);
+
   // Compute total for currently selected seats
   const totalAmount = selectedSeats.reduce((sum, s) => sum + s.priceNPR, 0);
 
@@ -56,6 +70,21 @@ export const SeatPicker: React.FC<SeatPickerProps> = ({
         <div className="fixed top-20 z-50 flex items-center gap-2 bg-amber-500/90 text-black px-4 py-2.5 rounded-full font-semibold text-xs shadow-2xl animate-bounce">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Sold Out Banner */}
+      {isSectionSoldOut && (
+        <div className="w-full max-w-md mx-auto mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center animate-fadeIn">
+          <p className="text-xs text-amber-200 font-semibold mb-2">
+            {language === 'ne' ? 'यस खण्डका सबै सिटहरू बिक्री भइसकेका छन्।' : 'All seats in this section are currently sold out.'}
+          </p>
+          <button
+            onClick={() => useBookingStore.getState().selectSection(null)}
+            className="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors cursor-pointer"
+          >
+            {language === 'ne' ? 'अर्को खण्ड छान्नुहोस्' : 'Pick Another Section'}
+          </button>
         </div>
       )}
 

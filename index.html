@@ -2,20 +2,61 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0a0b10" />
-    <title>Aasan (आसन) — Immersive Seat Selection & Ticketing for Nepal</title>
+
+    <!-- Favicons & App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Preload Hero Poster for sub-2.5s LCP -->
+    <link rel="preload" as="image" href="/landing/hero-poster.webp" type="image/webp" />
+
+    <title>Aasan (आसन) — See Your Seat Before You Book | Nepal 3D Ticketing</title>
     <meta name="description" content="See your exact seat in 3D before you book. Nepal's premier interactive ticketing platform for stadiums and cinema halls." />
-    <!-- Open Graph / Social Preview -->
+    <link rel="canonical" href="https://aasan.com.np/" />
+    <link rel="alternate" hreflang="en" href="https://aasan.com.np/?lang=en" />
+    <link rel="alternate" hreflang="ne" href="https://aasan.com.np/?lang=ne" />
+    <link rel="alternate" hreflang="x-default" href="https://aasan.com.np/" />
+
+    <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Aasan (आसन) — 3D Seat View & Ticketing" />
-    <meta property="og:description" content="See your exact seat in 3D before you book. Nepal's premier interactive ticketing platform for stadiums and cinema halls." />
-    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:url" content="https://aasan.com.np/" />
+    <meta property="og:title" content="Aasan (आसन) — See Your Seat Before You Book" />
+    <meta property="og:description" content="Explore TU Stadium stands and luxury cinema recliners in full 3D with authentic sightlines, acoustic ambience, and instant digital tickets." />
+    <meta property="og:image" content="https://aasan.com.np/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ne_NP" />
+
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Aasan (आसन) — 3D Seat View & Ticketing" />
-    <meta name="twitter:description" content="See your exact seat in 3D before you book. Nepal's premier interactive ticketing platform for stadiums and cinema halls." />
-    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:url" content="https://aasan.com.np/" />
+    <meta name="twitter:title" content="Aasan (आसन) — See Your Seat Before You Book" />
+    <meta name="twitter:description" content="Explore TU Stadium stands and luxury cinema recliners in full 3D with authentic sightlines, acoustic ambience, and instant digital tickets." />
+    <meta name="twitter:image" content="https://aasan.com.np/og-image.png" />
+
+    <!-- Organization Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Aasan Nepal",
+        "alternateName": "आसन नेपाल",
+        "url": "https://aasan.com.np",
+        "logo": "https://aasan.com.np/brand/logo.svg",
+        "description": "Interactive 3D seat preview and digital ticketing platform for stadiums and cinema halls in Nepal.",
+        "areaServed": {
+          "@type": "Country",
+          "name": "Nepal"
+        }
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">

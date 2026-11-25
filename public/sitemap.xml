@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://aasan.com.np/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://aasan.com.np/?lang=en" />
+    <xhtml:link rel="alternate" hreflang="ne" href="https://aasan.com.np/?lang=ne" />
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://aasan.com.np/stadium/tu</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://aasan.com.np/stadium/tu?lang=en" />
+    <xhtml:link rel="alternate" hreflang="ne" href="https://aasan.com.np/stadium/tu?lang=ne" />
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://aasan.com.np/cinema/qfx-civil-audi1</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://aasan.com.np/cinema/qfx-labim-screen2</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://aasan.com.np/cinema/civil-mall-cinema</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://aasan.com.np/cinema/fcube-cinemas</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://aasan.com.np/cinema/big-movies</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://aasan.com.np/cinema/one-cinemas-eyeplex</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

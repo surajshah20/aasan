@@ -84,6 +84,28 @@ export const SLUG_TO_VENUE_ID: Record<string, string> = {
 let isApplyingFromUrl = false;
 let lastPushedUrl = '';
 
+export function updateDocumentMeta(title: string, desc?: string): void {
+  if (typeof document === 'undefined') return;
+  document.title = title;
+  if (desc) {
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute('content', desc);
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', desc);
+    const twDesc = document.querySelector('meta[name="twitter:description"]');
+    if (twDesc) twDesc.setAttribute('content', desc);
+  }
+  const ogTitle = document.querySelector('meta[property="og:title"]');
+  if (ogTitle) ogTitle.setAttribute('content', title);
+  const twTitle = document.querySelector('meta[name="twitter:title"]');
+  if (twTitle) twTitle.setAttribute('content', title);
+
+  const canonical = document.querySelector('link[rel="canonical"]');
+  if (canonical && typeof window !== 'undefined') {
+    canonical.setAttribute('href', window.location.href.split('?')[0]);
+  }
+}
+
 /**
  * Build canonical URL string from the current Zustand booking store state.
  */
@@ -448,6 +470,24 @@ export function initUrlRouting(): () => void {
     if (newUrl && newUrl !== currentFullUrl && newUrl !== lastPushedUrl) {
       lastPushedUrl = newUrl;
       window.history.pushState(null, '', newUrl);
+    }
+
+    // Dynamic SEO meta update
+    const curState = useBookingStore.getState();
+    if (curState.currentView === 'landing') {
+      updateDocumentMeta('Aasan (आसन) — See Your Seat Before You Book | Nepal 3D Ticketing', 'Explore TU Stadium and cinema halls in full 3D with authentic sightlines and instant ticketing.');
+    } else if (curState.currentView === 'checkout') {
+      updateDocumentMeta('Checkout & Seat Hold | Aasan', 'Complete your booking with eSewa, Khalti, Fonepay, or IME Pay.');
+    } else if (curState.currentView === 'ticket') {
+      updateDocumentMeta('Your Digital Ticket | Aasan', 'Your confirmed digital ticket for entry.');
+    } else if (curState.activeSeat) {
+      updateDocumentMeta(`${curState.activeSeat.sectionName} · Row ${curState.activeSeat.row} · Seat ${curState.activeSeat.number} | Aasan`, `Sightline preview from ${curState.activeSeat.sectionName} Row ${curState.activeSeat.row} Seat ${curState.activeSeat.number}.`);
+    } else if (curState.selectedVenueId) {
+      const vList = venuesData as unknown as Venue[];
+      const v = vList.find(item => item.id === curState.selectedVenueId);
+      if (v) {
+        updateDocumentMeta(`${v.name.en} | Aasan 3D Seat Map`, v.description.en);
+      }
     }
   });
 

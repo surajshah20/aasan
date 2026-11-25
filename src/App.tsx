@@ -1,13 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { LandingHero } from './features/landing/LandingHero';
-import { VenueOverview } from './features/venue/VenueOverview';
-import { MockCheckout } from './features/checkout/MockCheckout';
-import { TicketView } from './features/ticket/TicketView';
 import { useBookingStore } from './store/useBookingStore';
 import { initUrlRouting } from './lib/urlRouting';
-import { AlertCircle, X } from 'lucide-react';
+import { AlertCircle, X, Loader2 } from 'lucide-react';
+
+const VenueOverview = lazy(() => import('./features/venue/VenueOverview').then((m) => ({ default: m.VenueOverview })));
+const MockCheckout = lazy(() => import('./features/checkout/MockCheckout').then((m) => ({ default: m.MockCheckout })));
+const TicketView = lazy(() => import('./features/ticket/TicketView').then((m) => ({ default: m.TicketView })));
 
 export const App: React.FC = () => {
   const { currentView, toastMessage, setToastMessage } = useBookingStore();
@@ -37,10 +38,16 @@ export const App: React.FC = () => {
       )}
 
       <main className={currentView === 'venue' ? 'flex-1 w-full overflow-hidden relative' : 'flex-1'}>
-        {currentView === 'landing' && <LandingHero />}
-        {currentView === 'venue' && <VenueOverview />}
-        {currentView === 'checkout' && <MockCheckout />}
-        {currentView === 'ticket' && <TicketView />}
+        <Suspense fallback={
+          <div className="w-full min-h-[50vh] flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-7 h-7 text-crimson animate-spin" />
+          </div>
+        }>
+          {currentView === 'landing' && <LandingHero />}
+          {currentView === 'venue' && <VenueOverview />}
+          {currentView === 'checkout' && <MockCheckout />}
+          {currentView === 'ticket' && <TicketView />}
+        </Suspense>
       </main>
 
       {/* Footer is only rendered on landing, checkout, and ticket views to make 3D venue view 100% hero */}

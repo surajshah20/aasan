@@ -34,6 +34,13 @@ export const BAYS_CONFIG = [
   { prefix: 'NE', nameEn: 'North-East Stand', nameNe: 'उत्तर-पूर्व प्यारापेट', baseColor: '#dc2626', sectionId: 'tu_north_east', hasOrangeCenter: false },
 ];
 
+export function getStadiumStandTier(prefix: string, tierType: 'lower' | 'upper'): string {
+  if (prefix === 'P' || prefix === 'V') return 'VIP';
+  if (prefix === 'SE') return tierType === 'upper' ? 'VIP' : 'Premium';
+  if (tierType === 'upper') return 'Premium';
+  return 'Standard';
+}
+
 export function buildStadiumDrillDownData(sections: Section[], soldKeys: string[]) {
   const Rx = 65.0;
   const Rz = 75.0;
@@ -209,7 +216,7 @@ export function buildStadiumDrillDownData(sections: Section[], soldKeys: string[
                 row: rowLetter,
                 number: s + 1,
                 priceNPR: lowerStand.priceNPR,
-                tier: 'Standard',
+                tier: getStadiumStandTier(bay.prefix, 'lower'),
                 position: [px, yElevation + 0.02, pz],
                 baseColor: seatCol,
               };
@@ -322,7 +329,7 @@ export function buildStadiumDrillDownData(sections: Section[], soldKeys: string[
                 row: rowLetter,
                 number: s + 1,
                 priceNPR: upperStand.priceNPR,
-                tier: 'Standard',
+                tier: getStadiumStandTier(bay.prefix, 'upper'),
                 position: [px, yElevation + 0.02, pz],
                 baseColor: seatCol,
               };

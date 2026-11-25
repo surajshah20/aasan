@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useBookingStore } from '../../store/useBookingStore';
 import { useT } from '../../i18n/useT';
 import { formatPrice } from '../../lib/money';
@@ -8,92 +8,143 @@ export const SeatViewBar: React.FC = () => {
   const { language } = useT();
   const { activeSeat, returnToOverview, bookCurrentSeat, addAnotherSeat, selectedSeats } = useBookingStore();
 
+  const seatLine = useMemo(() => {
+    if (!activeSeat) return '';
+    let blockText = '';
+    const rawBlock = activeSeat.blockLabel || activeSeat.blockId || '';
+    if (rawBlock) {
+      if (rawBlock.toLowerCase().startsWith('block ')) {
+        blockText = rawBlock;
+      } else if (rawBlock.includes('_b')) {
+        const parts = rawBlock.split('_b');
+        const prefix = parts[0].split('_')[0].toUpperCase();
+        blockText = `Block ${prefix}${parts[1]}`;
+      } else {
+        blockText = `Block ${rawBlock}`;
+      }
+    } else if (activeSeat.standName?.toLowerCase().includes('pavilion')) {
+      blockText = 'Block P1';
+    }
+
+    if (blockText) {
+      return `${blockText} · Row ${activeSeat.row} · Seat ${activeSeat.number}`;
+    }
+    return `Row ${activeSeat.row} · Seat ${activeSeat.number}`;
+  }, [activeSeat]);
+
   if (!activeSeat) return null;
 
-  const isRecliner = activeSeat.tier.toLowerCase().includes('recliner');
-  const isPremium = activeSeat.tier.toLowerCase().includes('premium') || activeSeat.tier.toLowerCase().includes('club');
+  const tier = (activeSeat.tier || 'Standard').trim();
+  const tierLower = tier.toLowerCase();
+  const isVIP = tierLower.includes('vip');
+  const isRecliner = tierLower.includes('recliner');
+  const isPremium = tierLower.includes('premium') || tierLower.includes('club');
 
-  const tierBadgeBg = isRecliner
-    ? 'bg-rose-950/70 border-rose-500/50 text-rose-300'
-    : isPremium
-      ? 'bg-amber-950/70 border-amber-500/50 text-amber-300'
-      : 'bg-sky-950/70 border-sky-500/50 text-sky-300';
+  const tierBadgeStyle = isVIP
+    ? 'bg-amber-500/20 border-amber-400/50 text-amber-300 font-bold'
+    : isRecliner
+      ? 'bg-rose-500/20 border-rose-400/50 text-rose-300 font-semibold'
+      : isPremium
+        ? 'bg-purple-500/20 border-purple-400/50 text-purple-300 font-semibold'
+        : 'bg-sky-500/15 border-sky-400/35 text-sky-300 font-medium';
+
+  // Requirement 4 & 7: Neutral outline style (white 15% border, off-white text, min 44px touch target)
+  const neutralBtnClass =
+    'min-h-[44px] px-2 sm:px-4 py-2 rounded-xl sm:rounded-pill bg-white/[0.08] hover:bg-white/[0.14] text-white/90 hover:text-white text-[11px] sm:text-xs font-semibold border border-white/15 transition-all active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap backdrop-blur-md shadow-sm min-w-0';
+
+  // Requirement 4 & 7: "Book this seat" as the only filled, accent-colored button
+  const bookBtnClass =
+    'min-h-[44px] px-2 sm:px-5 py-2 rounded-xl sm:rounded-pill bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-bold shadow-lg shadow-amber-500/25 transition-all active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap min-w-0';
+
+  const disabledLimitBtnClass =
+    'min-h-[44px] px-2 sm:px-4 py-2 rounded-xl sm:rounded-pill bg-white/5 text-white/40 text-[10px] sm:text-xs font-medium border border-white/10 cursor-not-allowed flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap opacity-70 min-w-0';
 
   return (
-    <div className="absolute bottom-2.5 sm:bottom-3.5 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-3 pointer-events-auto animate-fadeIn">
-      <div className="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-2xl sm:rounded-pill shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 border border-white/15 bg-[#060810]/60 backdrop-blur-3xl">
-        {/* Seat Information Pill */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
-            <Armchair className="w-3.5 h-3.5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-bold text-white text-xs sm:text-sm tracking-wide whitespace-nowrap">
-                {activeSeat.sectionName}
-              </span>
-              <span className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.2 rounded-full border font-semibold uppercase tracking-wider whitespace-nowrap ${tierBadgeBg}`}>
-                {activeSeat.tier}
-              </span>
-              {activeSeat.isRestrictedView && (
-                <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.2 rounded-full border border-amber-500/50 bg-amber-950/80 text-amber-300 font-semibold uppercase tracking-wider whitespace-nowrap">
-                  ⚠️ {language === 'ne' ? 'सीमित दृश्य' : 'Restricted view'}
-                </span>
-              )}
+    <div className="absolute bottom-2.5 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-3xl px-3 pointer-events-auto animate-fadeIn select-none">
+      {/* Container: on mobile (< sm) stacks info above buttons, on desktop is single horizontal bar */}
+      <div className="px-3 sm:px-5 py-2.5 rounded-2xl sm:rounded-pill shadow-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4 border border-white/15 bg-[#060810]/85 backdrop-blur-3xl">
+        
+        {/* Seat Information & Price (Requirement 3 & 5) */}
+        <div className="flex items-center justify-between gap-2 sm:gap-3 w-full sm:w-auto shrink-0 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
+              <Armchair className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
-            <p className="text-[11px] sm:text-xs text-muted flex items-center gap-1.5 mt-0.5 whitespace-nowrap">
-              <span>Row <strong className="text-white font-semibold">{activeSeat.row}</strong></span>
-              <span>•</span>
-              <span>Seat <strong className="text-white font-semibold">#{activeSeat.number}</strong></span>
-              <span>•</span>
-              <span className="text-amber-300 font-bold">
-                {formatPrice(activeSeat.priceNPR, language)}
-              </span>
-            </p>
+
+            <div className="min-w-0">
+              {/* Title: Seat Name + Tier Badge (Requirement 2 & 5) */}
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <span className="font-bold text-white text-xs sm:text-sm tracking-wide truncate max-w-[170px] sm:max-w-none">
+                  {activeSeat.sectionName}
+                </span>
+                <span className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full border uppercase tracking-wider whitespace-nowrap ${tierBadgeStyle}`}>
+                  {tier}
+                </span>
+                {activeSeat.isRestrictedView && (
+                  <span className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full border border-amber-500/50 bg-amber-950/80 text-amber-300 font-semibold uppercase tracking-wider whitespace-nowrap">
+                    ⚠️ {language === 'ne' ? 'सीमित दृश्य' : 'Restricted view'}
+                  </span>
+                )}
+              </div>
+
+              {/* Requirement 3: "Block P1 · Row A · Seat 1" (no hash sign) */}
+              <p className="text-[11px] sm:text-xs text-muted flex items-center gap-1.5 mt-0.5 whitespace-nowrap">
+                <span className="font-medium text-slate-300">{seatLine}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Requirement 5: Price larger (~18-20 px), in accent color, on right of seat info */}
+          <div className="pl-2 sm:pl-4 sm:border-l sm:border-white/15 shrink-0 text-right sm:text-left">
+            <span className="text-[17px] sm:text-[20px] leading-none font-extrabold text-amber-400 tracking-tight whitespace-nowrap">
+              {formatPrice(activeSeat.priceNPR, language)}
+            </span>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-end shrink-0">
-          {/* Other Seats (Fly Back to Overview) */}
+        {/* Action Buttons (Requirement 1, 4, 6, 7) */}
+        <div className="grid grid-cols-3 sm:flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-end shrink-0">
+          {/* Other Seats (Fly Back to Block/Overview) */}
           <button
             onClick={returnToOverview}
-            className="flex-1 sm:flex-none px-3 py-1.5 sm:py-2 rounded-pill bg-white/10 hover:bg-white/20 text-white/90 hover:text-white text-[11px] sm:text-xs font-semibold border border-white/15 transition-all active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap backdrop-blur-md"
-            title="Return to venue overview"
+            className={`w-full sm:w-auto ${neutralBtnClass}`}
+            title="Return to overview"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>{language === 'ne' ? 'अन्य सिटहरू' : 'Other seats'}</span>
+            <ArrowLeft className="w-3.5 h-3.5 text-white/80 shrink-0" />
+            <span className="truncate">{language === 'ne' ? 'अन्य सिट' : 'Other seats'}</span>
           </button>
 
-          {/* Add Another Seat */}
+          {/* Requirement 1 & 6: Add Seat with one plus icon, or disabled limit reached (8) */}
           {selectedSeats.length >= 8 ? (
             <button
               disabled
-              className="flex-1 sm:flex-none px-3 py-1.5 sm:py-2 rounded-pill bg-white/5 text-white/40 text-[11px] sm:text-xs font-medium border border-white/10 cursor-not-allowed flex items-center justify-center gap-1.5 whitespace-nowrap"
+              className={`w-full sm:w-auto ${disabledLimitBtnClass}`}
               title="Maximum of 8 seats reached"
             >
-              <span>{language === 'ne' ? 'अधिकतम सिट सीमा (८)' : 'Seat limit reached (8)'}</span>
+              <span className="truncate">{language === 'ne' ? 'सीमा पुग्यो (८)' : 'Seat limit reached (8)'}</span>
             </button>
           ) : (
             <button
               onClick={addAnotherSeat}
-              className="flex-1 sm:flex-none px-3 py-1.5 sm:py-2 rounded-pill bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-white text-[11px] sm:text-xs font-semibold border border-amber-500/40 transition-all active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap backdrop-blur-md"
+              className={`w-full sm:w-auto ${neutralBtnClass}`}
               title="Add this seat and pick another"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{language === 'ne' ? '+ अर्को सिट' : '+ Add seat'}</span>
+              {/* Requirement 1: Only ONE plus as an icon, no duplicate plus in label */}
+              <Plus className="w-3.5 h-3.5 text-white/80 shrink-0" />
+              <span className="truncate">{language === 'ne' ? 'अर्को सिट' : 'Add seat'}</span>
             </button>
           )}
 
-          {/* Book this seat (Proceeds to Checkout) */}
+          {/* Requirement 4: Book this seat (the only filled, accent-colored button) */}
           <button
             onClick={bookCurrentSeat}
-            className="flex-1 sm:flex-none px-4 sm:px-5 py-1.5 sm:py-2 rounded-pill bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-bold shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap"
+            className={`w-full sm:w-auto ${bookBtnClass}`}
           >
-            <Ticket className="w-3.5 h-3.5" />
-            <span>{language === 'ne' ? 'यो सिट बुक गर्नुहोस्' : 'Book this seat'}</span>
+            <Ticket className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{language === 'ne' ? 'बुक गर्नुहोस्' : 'Book this seat'}</span>
           </button>
         </div>
+
       </div>
     </div>
   );

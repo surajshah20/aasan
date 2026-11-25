@@ -94,7 +94,7 @@ export const VenueOverview: React.FC = () => {
           <span className="font-bold text-xs whitespace-nowrap" title={activeSeat.sectionName}>{activeSeat.sectionName}</span>
           <span className="text-white/30">•</span>
           <span className="text-white/80 text-xs whitespace-nowrap">
-            <span className="hidden sm:inline">Row </span>{activeSeat.row} · #{activeSeat.number}
+            <span className="hidden sm:inline">Row </span>{activeSeat.row} · Seat {activeSeat.number}
           </span>
           <span className="text-white/30">•</span>
           <span className="text-amber-400 font-bold text-xs shrink-0">

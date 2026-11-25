@@ -545,8 +545,13 @@ const CinemaPostProcessing: React.FC<{ quality: 'high' | 'medium' | 'lite' }> = 
     gl.toneMappingExposure = 1.1;
   }, [gl]);
 
-  const composer = useMemo(() => {
-    if (quality === 'lite') return null;
+  const [composer, setComposer] = useState<EffectComposer | null>(null);
+
+  useEffect(() => {
+    if (quality === 'lite') {
+      setComposer(null);
+      return;
+    }
 
     const comp = new EffectComposer(gl);
     comp.setSize(size.width, size.height);
@@ -567,8 +572,17 @@ const CinemaPostProcessing: React.FC<{ quality: 'high' | 'medium' | 'lite' }> = 
     const outputPass = new OutputPass();
     comp.addPass(outputPass);
 
-    return comp;
-  }, [gl, scene, camera, size, quality]);
+    setComposer(comp);
+
+    return () => {
+      comp.passes.forEach((pass: any) => {
+        if (pass.dispose) pass.dispose();
+      });
+      comp.renderTarget1?.dispose();
+      comp.renderTarget2?.dispose();
+      comp.dispose();
+    };
+  }, [gl, scene, camera, size.width, size.height, quality]);
 
   useFrame(() => {
     if (composer && quality !== 'lite') {
@@ -576,6 +590,40 @@ const CinemaPostProcessing: React.FC<{ quality: 'high' | 'medium' | 'lite' }> = 
     }
   }, 1);
 
+  return null;
+};
+
+// Scene-level Three.js Resource Disposer for Cinema on Unmount
+const CinemaSceneDisposer: React.FC = () => {
+  const { scene, gl } = useThree();
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__THREE_RENDERER__ = gl;
+    }
+    return () => {
+      scene.traverse((obj: any) => {
+        if (obj.geometry) {
+          obj.geometry.dispose();
+        }
+        if (obj.material) {
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach((mat: any) => {
+              for (const k in mat) {
+                if (mat[k]?.isTexture) mat[k].dispose();
+              }
+              mat.dispose();
+            });
+          } else {
+            for (const k in obj.material) {
+              if (obj.material[k]?.isTexture) obj.material[k].dispose();
+            }
+            obj.material.dispose();
+          }
+        }
+      });
+      gl.renderLists?.dispose();
+    };
+  }, [scene, gl]);
   return null;
 };
 
@@ -1257,6 +1305,16 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
   const fabricBump = useMemo(() => createFabricBumpTexture(), []);
   const carpetTexture = useMemo(() => createCarpetTexture(), []);
 
+  useEffect(() => {
+    return () => {
+      reclinerGeo.dispose();
+      premiumGeo.dispose();
+      standardGeo.dispose();
+      fabricBump.dispose();
+      carpetTexture.dispose();
+    };
+  }, [reclinerGeo, premiumGeo, standardGeo, fabricBump, carpetTexture]);
+
   // Generate All Individual Cinema Seats
   const seatsData = useMemo(() => {
     const list: CinemaSeatInstance[] = [];
@@ -1379,6 +1437,9 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
       >
         <color attach="background" args={['#07080e']} />
         <fogExp2 attach="fog" args={['#07080e', 0.014]} />
+
+        {/* Automatic Resource Disposal on Unmount */}
+        <CinemaSceneDisposer />
 
         {/* Ambient & General Illumination (Part 4: Enhanced visibility of all tiers) */}
         <ambientLight intensity={1.28} color="#cbd5e1" />

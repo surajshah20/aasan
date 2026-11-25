@@ -2930,10 +2930,14 @@ const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = (
 const StadiumPostProcessing: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = ({ isEvening, isLiteMode }) => {
   const { gl, scene, camera, size } = useThree();
 
-  const composer = useMemo(() => {
-    if (isLiteMode || !isEvening) return null;
+  const [composer, setComposer] = useState<EffectComposer | null>(null);
 
-    // Use WebGLRenderTarget with 4x MSAA hardware multisampling to eliminate moiré and edge aliasing
+  useEffect(() => {
+    if (isLiteMode || !isEvening) {
+      setComposer(null);
+      return;
+    }
+
     const renderTarget = new THREE.WebGLRenderTarget(size.width, size.height, {
       type: THREE.HalfFloatType,
       samples: 4,
@@ -2943,19 +2947,28 @@ const StadiumPostProcessing: React.FC<{ isEvening: boolean; isLiteMode: boolean 
     const renderPass = new RenderPass(scene, camera);
     comp.addPass(renderPass);
 
-    // UnrealBloomPass: threshold 0.98 ensures bloom applies strictly to floodlight bulbs, scoreboard, and sponsor boards (0 pitch bloom)
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(size.width, size.height),
-      0.28, // bloom strength
-      0.10, // bloom radius
-      0.98  // bloom threshold
+      0.28,
+      0.10,
+      0.98
     );
     comp.addPass(bloomPass);
 
     const outputPass = new OutputPass();
     comp.addPass(outputPass);
 
-    return comp;
+    setComposer(comp);
+
+    return () => {
+      comp.passes.forEach((pass: any) => {
+        if (pass.dispose) pass.dispose();
+      });
+      comp.renderTarget1?.dispose();
+      comp.renderTarget2?.dispose();
+      renderTarget.dispose();
+      comp.dispose();
+    };
   }, [gl, scene, camera, size.width, size.height, isEvening, isLiteMode]);
 
   useEffect(() => {
@@ -2972,6 +2985,40 @@ const StadiumPostProcessing: React.FC<{ isEvening: boolean; isLiteMode: boolean 
     }
   }, 1);
 
+  return null;
+};
+
+// Scene-level Three.js Resource Disposer on Unmount
+const StadiumSceneDisposer: React.FC = () => {
+  const { scene, gl } = useThree();
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__THREE_RENDERER__ = gl;
+    }
+    return () => {
+      scene.traverse((obj: any) => {
+        if (obj.geometry) {
+          obj.geometry.dispose();
+        }
+        if (obj.material) {
+          if (Array.isArray(obj.material)) {
+            obj.material.forEach((mat: any) => {
+              for (const k in mat) {
+                if (mat[k]?.isTexture) mat[k].dispose();
+              }
+              mat.dispose();
+            });
+          } else {
+            for (const k in obj.material) {
+              if (obj.material[k]?.isTexture) obj.material[k].dispose();
+            }
+            obj.material.dispose();
+          }
+        }
+      });
+      gl.renderLists?.dispose();
+    };
+  }, [scene, gl]);
   return null;
 };
 
@@ -2996,6 +3043,8 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
     toggleSeat,
     getSoldSeatKeys,
     isLiteMode,
+    lightingMode,
+    setLightingMode,
   } = useBookingStore();
 
   const soldKeys = useMemo(() => getSoldSeatKeys(), [getSoldSeatKeys]);
@@ -3003,7 +3052,6 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
   const [hoveredStandId, setHoveredStandId] = useState<string | null>(null);
   const [hoveredBlockId, setHoveredBlockId] = useState<string | null>(null);
   const [hoveredSeat, setHoveredSeat] = useState<StadiumSeatInstance | null>(null);
-  const [lightingMode, setLightingMode] = useState<'evening' | 'day'>('evening');
   const isDebugUrl = useMemo(() => {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search);
@@ -3276,6 +3324,9 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
         {!isLiteMode && (
           <fog attach="fog" args={[isEvening ? '#010206' : '#a8cde8', isEvening ? 160 : 140, isEvening ? 680 : 780]} />
         )}
+
+        {/* Automatic Resource Disposal on Unmount */}
+        <StadiumSceneDisposer />
 
         {/* Photorealistic Night Stadium Bloom & Post-processing */}
         <StadiumPostProcessing isEvening={isEvening} isLiteMode={isLiteMode} />

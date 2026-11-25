@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Section, SelectedSeat } from '../../types';
-import { useBookingStore } from '../../store/useBookingStore';
+import { useBookingStore, getSeatId } from '../../store/useBookingStore';
 import { useT } from '../../i18n/useT';
 import { formatPrice } from '../../lib/money';
 import { 
@@ -228,7 +228,7 @@ export const SeatPicker: React.FC<SeatPickerProps> = ({
               <div className="flex items-center gap-1.5 flex-nowrap">
                 {selectedSeats.map((seat) => (
                   <span
-                    key={`${seat.row}-${seat.number}`}
+                    key={getSeatId(seat)}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-crimson/20 border border-crimson/40 text-text text-xs font-semibold"
                   >
                     <span>{seat.row}{seat.number}</span>

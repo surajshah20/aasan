@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useBookingStore } from '../../store/useBookingStore';
+import { useBookingStore, getSeatId } from '../../store/useBookingStore';
 import { useT } from '../../i18n/useT';
 import { formatPrice } from '../../lib/money';
 import venuesData from '../../data/venues.json';
@@ -230,14 +230,21 @@ export const MockCheckout: React.FC = () => {
                 {t('selected_seats_label')} ({selectedSeats.length})
               </p>
               <div className="flex flex-wrap gap-1.5 mb-3">
-                {selectedSeats.map((s) => (
-                  <span
-                    key={`${s.row}-${s.number}`}
-                    className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-text text-xs"
-                  >
-                    Row {s.row} • #{s.number}
-                  </span>
-                ))}
+                {selectedSeats.map((s) => {
+                  const prefix = s.blockLabel
+                    ? s.blockLabel
+                    : s.standName
+                      ? s.standName.replace(' Stand', '').replace('— Lower', '').replace('— Upper', '').trim()
+                      : s.sectionId;
+                  return (
+                    <span
+                      key={getSeatId(s)}
+                      className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-text text-xs"
+                    >
+                      {prefix} · Row {s.row} · Seat {s.number}
+                    </span>
+                  );
+                })}
               </div>
             </div>
 

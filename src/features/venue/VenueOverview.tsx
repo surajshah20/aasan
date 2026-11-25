@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useState, useEffect } from 'react';
-import { useBookingStore } from '../../store/useBookingStore';
+import { useBookingStore, getSeatId } from '../../store/useBookingStore';
 import { useT } from '../../i18n/useT';
 import venuesData from '../../data/venues.json';
 import { VenueMap2D } from './VenueMap2D';
@@ -234,21 +234,43 @@ export const VenueOverview: React.FC = () => {
                       {formatPrice(totalNPR, language)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    {selectedSeats.map((s) => (
-                      <span
-                        key={`${s.row}-${s.number}`}
-                        className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white flex items-center gap-1"
-                      >
-                        <span>{s.row}{s.number}</span>
-                        <button
-                          onClick={() => toggleSeat(s)}
-                          className="hover:text-red-400"
-                        >
-                          <X className="w-2.5 h-2.5" />
-                        </button>
-                      </span>
-                    ))}
+                  <div className="flex items-center gap-1.5 mt-0.5 overflow-x-auto max-w-[280px] sm:max-w-xs py-0.5 scrollbar-none">
+                    {selectedSeats.map((s) => {
+                      const seatKey = getSeatId(s);
+                      // Stand / Block prefix, e.g. "P1 · A1", "East · A1", "Audi 1 · K6"
+                      const prefix = s.blockLabel
+                        ? s.blockLabel
+                        : s.standName
+                          ? s.standName.replace(' Stand', '').replace('— Lower', '').replace('— Upper', '').trim()
+                          : s.sectionId;
+                      const chipText = `${prefix} · ${s.row}${s.number}`;
+                      const fullDetail = `${s.standName || s.sectionId}${s.blockLabel ? ` · Block ${s.blockLabel}` : ''} · Row ${s.row} · Seat ${s.number} · ${formatPrice(s.priceNPR, language)} (${s.tier})`;
+
+                      return (
+                        <div key={seatKey} className="group relative shrink-0">
+                          <span
+                            title={fullDetail}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <span className="font-semibold">{chipText}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSeat(s);
+                              }}
+                              className="text-white/60 hover:text-red-400 p-0.5 rounded hover:bg-white/10 transition-colors"
+                              aria-label={`Remove seat ${chipText}`}
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </span>
+                          {/* Rich Floating Tooltip on Hover / Focus */}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 pointer-events-none whitespace-nowrap px-2.5 py-1 rounded-md bg-[#0e111a]/95 border border-white/20 text-[10px] text-white shadow-2xl backdrop-blur-md">
+                            {fullDetail}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

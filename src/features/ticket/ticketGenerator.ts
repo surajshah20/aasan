@@ -25,6 +25,39 @@ export interface TicketGenData {
   venueSubline: string;
 }
 
+// Guaranteed web-safe font stacks with Devanagari & Latin priority, preventing fallback to generic system fonts
+export const FONT_DEVANAGARI = '"Noto Sans Devanagari", "Inter", "Outfit", "Segoe UI", Arial, sans-serif';
+export const FONT_LATIN = '"Inter", "Outfit", "Noto Sans Devanagari", "Segoe UI", Arial, sans-serif';
+export const FONT_MONO = '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace';
+
+let ticketFontsLoadedPromise: Promise<void> | null = null;
+
+export async function ensureTicketFonts(): Promise<void> {
+  if (typeof document === 'undefined' || !('fonts' in document)) return;
+  if (!ticketFontsLoadedPromise) {
+    ticketFontsLoadedPromise = (async () => {
+      try {
+        await Promise.allSettled([
+          document.fonts.load('400 16px "Noto Sans Devanagari"'),
+          document.fonts.load('600 16px "Noto Sans Devanagari"'),
+          document.fonts.load('700 16px "Noto Sans Devanagari"'),
+          document.fonts.load('800 24px "Noto Sans Devanagari"'),
+          document.fonts.load('900 38px "Noto Sans Devanagari"'),
+          document.fonts.load('400 16px "Inter"'),
+          document.fonts.load('500 16px "Inter"'),
+          document.fonts.load('600 16px "Inter"'),
+          document.fonts.load('700 16px "Inter"'),
+          document.fonts.load('800 24px "Outfit"'),
+          document.fonts.ready,
+        ]);
+      } catch (err) {
+        console.warn('Font loading check completed with notice:', err);
+      }
+    })();
+  }
+  await ticketFontsLoadedPromise;
+}
+
 /**
  * Generate a standalone 1200 x 450 px light-designed ticket canvas for one seat.
  * Clean, hairline borders, zero glow/glass, white background, near-black text, crimson accent.
@@ -35,6 +68,8 @@ export async function createSingleTicketCanvas(
 ): Promise<HTMLCanvasElement> {
   const { booking, venue, event, seats, language, formattedPaymentMethod, formattedDateTime, venueHeadline, venueSubline } = data;
   const seat = seats[seatIndex] || seats[0];
+
+  await ensureTicketFonts();
 
   const width = 1200;
   const height = 450;
@@ -100,9 +135,9 @@ export async function createSingleTicketCanvas(
   ctx.fillStyle = 'rgba(220, 20, 60, 0.055)';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.font = '900 38px "Noto Sans Devanagari", Inter, system-ui, -apple-system, sans-serif';
+  ctx.font = `900 38px ${FONT_DEVANAGARI}`;
   ctx.fillText('DEMO TICKET — NOT VALID FOR ENTRY', 0, -14);
-  ctx.font = '700 20px "Noto Sans Devanagari", Inter, system-ui, -apple-system, sans-serif';
+  ctx.font = `700 20px ${FONT_DEVANAGARI}`;
   ctx.fillText('डेमो टिकट — वास्तविक प्रवेशको लागि मान्य छैन', 0, 20);
   ctx.restore();
 
@@ -113,11 +148,11 @@ export async function createSingleTicketCanvas(
   // Row 1: Brand & Demo Honesty Badge
   // Brand Header
   ctx.fillStyle = '#dc143c';
-  ctx.font = '800 22px "Noto Sans Devanagari", Outfit, Inter, sans-serif';
+  ctx.font = `800 22px ${FONT_DEVANAGARI}`;
   ctx.fillText('AASAN (आसन)', 35, 52);
 
   ctx.fillStyle = '#64748b';
-  ctx.font = '600 13px system-ui, -apple-system, sans-serif';
+  ctx.font = `600 13px ${FONT_LATIN}`;
   ctx.fillText('• 3D SEAT & TICKETING NEPAL', 205, 52);
 
   // Demo Honesty Pill on right side of main body
@@ -135,7 +170,7 @@ export async function createSingleTicketCanvas(
   ctx.stroke();
 
   ctx.fillStyle = '#dc143c';
-  ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+  ctx.font = `bold 11px ${FONT_LATIN}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('DEMO TICKET — NOT VALID FOR ENTRY', demoPillX + demoPillW / 2, demoPillY + demoPillH / 2);
@@ -143,7 +178,7 @@ export async function createSingleTicketCanvas(
 
   // Row 2: Event Title in Full
   ctx.fillStyle = '#0f172a';
-  ctx.font = '800 25px "Noto Sans Devanagari", Inter, system-ui, -apple-system, sans-serif';
+  ctx.font = `800 25px ${FONT_DEVANAGARI}`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   const displayTitle = (venue.type === 'cinema' && event.title?.en)
@@ -153,36 +188,36 @@ export async function createSingleTicketCanvas(
 
   // Subtitle / category
   ctx.fillStyle = '#64748b';
-  ctx.font = '500 13px "Noto Sans Devanagari", system-ui, -apple-system, sans-serif';
+  ctx.font = `500 13px ${FONT_DEVANAGARI}`;
   const displaySubtitle = event.subtitle?.[language] || event.subtitle?.en || 'Official Ticketing';
   ctx.fillText(displaySubtitle, 35, 128);
 
   // Row 3: Venue & Date/Time block
   // Left: Venue
   ctx.fillStyle = '#64748b';
-  ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+  ctx.font = `bold 10px ${FONT_LATIN}`;
   ctx.fillText('VENUE & LOCATION', 35, 162);
 
   ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 16px "Noto Sans Devanagari", system-ui, -apple-system, sans-serif';
+  ctx.font = `bold 16px ${FONT_DEVANAGARI}`;
   ctx.fillText(venueHeadline, 35, 184);
 
   ctx.fillStyle = '#64748b';
-  ctx.font = '500 12px "Noto Sans Devanagari", system-ui, -apple-system, sans-serif';
+  ctx.font = `500 12px ${FONT_DEVANAGARI}`;
   ctx.fillText(venueSubline, 35, 202);
 
   // Right: Date & Time
   const dateColX = 520;
   ctx.fillStyle = '#64748b';
-  ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+  ctx.font = `bold 10px ${FONT_LATIN}`;
   ctx.fillText('DATE & TIME', dateColX, 162);
 
   ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 16px "Noto Sans Devanagari", system-ui, -apple-system, sans-serif';
+  ctx.font = `bold 16px ${FONT_DEVANAGARI}`;
   ctx.fillText(formattedDateTime, dateColX, 184);
 
   ctx.fillStyle = '#64748b';
-  ctx.font = '500 12px system-ui, -apple-system, sans-serif';
+  ctx.font = `500 12px ${FONT_LATIN}`;
   ctx.fillText(venue.type === 'cinema' ? 'Doors open 15 mins before showtime' : 'Gate opens 2 hours before start', dateColX, 202);
 
   // Row 4: Large Seat Box
@@ -207,28 +242,28 @@ export async function createSingleTicketCanvas(
 
   // Seat Box Content
   ctx.fillStyle = '#dc143c';
-  ctx.font = 'bold 10px system-ui, -apple-system, sans-serif';
+  ctx.font = `bold 10px ${FONT_LATIN}`;
   ctx.fillText(`CONFIRMED SEAT ASSIGNMENT (PASS ${seatIndex + 1} OF ${seats.length})`, 54, seatBoxY + 24);
 
   // Stand / Tier / Block / Row / Seat in LARGE TYPE
   ctx.fillStyle = '#0f172a';
-  ctx.font = '800 23px "Noto Sans Devanagari", Inter, system-ui, -apple-system, sans-serif';
+  ctx.font = `800 23px ${FONT_DEVANAGARI}`;
   ctx.fillText(seat.fullLabel, 54, seatBoxY + 56);
 
   // Row 5: Meta info: Price, Payment method, and Booking ID
   const metaY = 345;
   ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 14px system-ui, -apple-system, sans-serif';
+  ctx.font = `bold 14px ${FONT_LATIN}`;
   ctx.fillText(`Price: NPR ${seat.priceNPR.toLocaleString()}`, 35, metaY);
 
   ctx.fillStyle = '#475569';
-  ctx.font = '500 13px system-ui, -apple-system, sans-serif';
+  ctx.font = `500 13px ${FONT_LATIN}`;
   ctx.fillText(`· Paid via ${formattedPaymentMethod} (Demo Mode)`, 180, metaY);
 
   // Booking ID Monospace Pill
   ctx.save();
   const idPillText = `ID: ${booking.id}`;
-  ctx.font = 'bold 13px monospace';
+  ctx.font = `bold 13px ${FONT_MONO}`;
   const idPillW = ctx.measureText(idPillText).width + 24;
   const idPillX = 865 - idPillW;
   const idPillY = metaY - 18;
@@ -254,7 +289,7 @@ export async function createSingleTicketCanvas(
 
   // Row 6: Requirement 4 Footer Line
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '500 11px system-ui, -apple-system, sans-serif';
+  ctx.font = `500 11px ${FONT_LATIN}`;
   ctx.fillText('Demo concept. Not affiliated with any venue or cinema. • www.aasan.com.np', 35, 402);
 
   // ==========================================
@@ -264,14 +299,14 @@ export async function createSingleTicketCanvas(
 
   // Stub Title
   ctx.fillStyle = '#dc143c';
-  ctx.font = 'bold 11px system-ui, -apple-system, sans-serif';
+  ctx.font = `bold 11px ${FONT_LATIN}`;
   ctx.textAlign = 'center';
   ctx.fillText('ENTRY PASS STUB', stubCenterX, 45);
 
   // Gate / Stand Badge
   const gateStand = seat.gateOrStand || 'GATE P1';
   ctx.save();
-  ctx.font = 'bold 12px system-ui, -apple-system, sans-serif';
+  ctx.font = `bold 12px ${FONT_LATIN}`;
   const gateBadgeW = Math.max(100, ctx.measureText(gateStand).width + 24);
   ctx.fillStyle = '#0f172a';
   ctx.beginPath();
@@ -286,13 +321,13 @@ export async function createSingleTicketCanvas(
 
   // Seat in stub
   ctx.fillStyle = '#0f172a';
-  ctx.font = '800 17px "Noto Sans Devanagari", system-ui, -apple-system, sans-serif';
+  ctx.font = `800 17px ${FONT_DEVANAGARI}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillText(seat.shortSeat, stubCenterX, 115);
 
   ctx.fillStyle = '#64748b';
-  ctx.font = '500 12px "Noto Sans Devanagari", system-ui, -apple-system, sans-serif';
+  ctx.font = `500 12px ${FONT_DEVANAGARI}`;
   ctx.fillText(seat.blockLabel || seat.standName || (venue.type === 'cinema' ? 'Audi 1' : 'Block P1'), stubCenterX, 134);
 
   // QR Code Generation onto Stub
@@ -326,12 +361,12 @@ export async function createSingleTicketCanvas(
 
   // Stub Booking Ref & tear instruction
   ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 12px monospace';
+  ctx.font = `bold 12px ${FONT_MONO}`;
   ctx.textAlign = 'center';
   ctx.fillText(booking.id, stubCenterX, 342);
 
   ctx.fillStyle = '#94a3b8';
-  ctx.font = '500 10px system-ui, -apple-system, sans-serif';
+  ctx.font = `500 10px ${FONT_LATIN}`;
   ctx.fillText('TEAR ALONG PERFORATION', stubCenterX, 362);
 
   return canvas;
@@ -344,6 +379,7 @@ export async function createSingleTicketCanvas(
  * File name: "Aasan-ticket-ASN-931651.pdf".
  */
 export async function generateTicketPDF(data: TicketGenData): Promise<void> {
+  await ensureTicketFonts();
   const { booking, seats } = data;
   const doc = new jsPDF('p', 'mm', 'a4'); // A4 is 210 x 297 mm
   const pageWidth = 210;

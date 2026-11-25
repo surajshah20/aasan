@@ -16,6 +16,17 @@ body {
   background-color: var(--bg);
   color: var(--text);
   overflow-x: hidden;
+  touch-action: pan-y;
+}
+
+/* Scope touch-action: none strictly to 3D WebGL canvases so OrbitControls function smoothly
+   without hijacking vertical page scrolling on mobile (390 px) across landing and venue pages */
+canvas {
+  touch-action: none;
+}
+
+#root, main, .landing-container {
+  touch-action: pan-y;
 }
 
 /* Custom scrollbar */

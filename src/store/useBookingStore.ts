@@ -5,6 +5,11 @@ import eventsData from '../data/events.json';
 import soldSeatsData from '../data/sold-seats.json';
 import { isLowEndDevice, isWebGLAvailable } from '../lib/device';
 
+export function getSeatId(seat: { sectionId: string; blockId?: string; blockLabel?: string; row: string; number: number }): string {
+  const block = seat.blockId || seat.blockLabel || 'noblock';
+  return `${seat.sectionId}-${block}-${seat.row}-${seat.number}`;
+}
+
 interface BookingStoreState {
   currentView: AppViewMode;
   selectedVenueId: string;
@@ -18,6 +23,8 @@ interface BookingStoreState {
   activeSeat: ActiveSeatView | null;
   selectedSeats: SelectedSeat[];
   isLiteMode: boolean;
+  lightingMode: 'evening' | 'day';
+  toastMessage: string | null;
   bookingResult: Booking | null;
   maxSeats: number;
 
@@ -30,6 +37,8 @@ interface BookingStoreState {
   setStadiumLevel: (level: StadiumDrillLevel) => void;
   selectStand: (standId: string | null) => void;
   selectBlock: (blockId: string | null) => void;
+  setLightingMode: (mode: 'evening' | 'day') => void;
+  setToastMessage: (msg: string | null) => void;
   drillBack: () => void;
   flyToSeat: (seat: ActiveSeatView) => void;
   returnToOverview: () => void;
@@ -60,10 +69,25 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
   activeSeat: null,
   selectedSeats: [],
   isLiteMode: initialLite,
+  lightingMode: 'evening',
+  toastMessage: null,
   bookingResult: null,
   maxSeats: 8,
 
   setView: (view) => set({ currentView: view }),
+
+  setLightingMode: (mode) => set({ lightingMode: mode }),
+
+  setToastMessage: (msg) => {
+    set({ toastMessage: msg });
+    if (msg) {
+      setTimeout(() => {
+        if (get().toastMessage === msg) {
+          set({ toastMessage: null });
+        }
+      }, 4500);
+    }
+  },
 
   selectVenue: (venueId, eventId) => {
     const matchedEvent = eventId || eventsData.find((e) => e.venueId === venueId)?.id || eventsData[0].id;
@@ -157,10 +181,8 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
     const { activeSeat, selectedSeats, maxSeats } = get();
     if (!activeSeat) return;
 
-    const seatKey = `${activeSeat.row}-${activeSeat.number}`;
-    const alreadyExists = selectedSeats.some(
-      (s) => s.sectionId === activeSeat.sectionId && `${s.row}-${s.number}` === seatKey
-    );
+    const targetId = getSeatId(activeSeat);
+    const alreadyExists = selectedSeats.some((s) => getSeatId(s) === targetId);
 
     let updated = selectedSeats;
     if (!alreadyExists && selectedSeats.length < maxSeats) {
@@ -191,10 +213,8 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
     const { activeSeat, selectedSeats, maxSeats } = get();
     if (!activeSeat) return;
 
-    const seatKey = `${activeSeat.row}-${activeSeat.number}`;
-    const alreadyExists = selectedSeats.some(
-      (s) => s.sectionId === activeSeat.sectionId && `${s.row}-${s.number}` === seatKey
-    );
+    const targetId = getSeatId(activeSeat);
+    const alreadyExists = selectedSeats.some((s) => getSeatId(s) === targetId);
 
     let updated = selectedSeats;
     if (!alreadyExists && selectedSeats.length < maxSeats) {
@@ -247,10 +267,8 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
 
   toggleSeat: (seat) => {
     const state = get();
-    const seatKey = `${seat.row}-${seat.number}`;
-    const existsIndex = state.selectedSeats.findIndex(
-      (s) => s.sectionId === seat.sectionId && `${s.row}-${s.number}` === seatKey
-    );
+    const targetId = getSeatId(seat);
+    const existsIndex = state.selectedSeats.findIndex((s) => getSeatId(s) === targetId);
 
     if (existsIndex >= 0) {
       set({

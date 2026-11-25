@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Section, VenueType } from '../../types';
-import { useBookingStore } from '../../store/useBookingStore';
+import { useBookingStore, getSeatId } from '../../store/useBookingStore';
 import { useT } from '../../i18n/useT';
-import { Tv, ChevronRight, ArrowLeft, Check } from 'lucide-react';
+import { Tv, ChevronRight, ArrowLeft, Check, X, Sparkles } from 'lucide-react';
 import { buildStadiumDrillDownData } from './stadiumDrillDownData';
 
 interface VenueMap2DProps {
@@ -30,7 +30,10 @@ export const VenueMap2D: React.FC<VenueMap2DProps> = ({
     selectedSeats,
     toggleSeat,
     getSoldSeatKeys,
+    maxSeats,
   } = useBookingStore();
+
+  const [announcement, setAnnouncement] = useState<string>('');
 
   const soldKeys = useMemo(() => getSoldSeatKeys(), [getSoldSeatKeys]);
 
@@ -263,20 +266,84 @@ export const VenueMap2D: React.FC<VenueMap2DProps> = ({
         </div>
       )}
 
-      {/* LEVEL 3 (Block View): Tappable Seats Grid */}
+      {/* LEVEL 3 (Block View): Tappable Accessible Seats Grid */}
       {stadiumLevel === 'block' && currentBlock && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
+        <div role="region" aria-label={`Block ${currentBlock.label} Seats`}>
+          {/* Live announcement region for Screen Readers */}
+          <div className="sr-only" aria-live="polite" aria-atomic="true">
+            {announcement}
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
-              <h2 className="text-base font-bold text-white">
-                Block {currentBlock.label} — {currentBlock.standName}
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <span>Block {currentBlock.label} — {currentBlock.standName}</span>
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                  NPR {currentBlock.priceNPR}
+                </span>
               </h2>
-              <p className="text-xs text-muted">Rows {currentBlock.rowStart} to {currentBlock.rowEnd} • NPR {currentBlock.priceNPR}</p>
+              <p className="text-xs text-muted">
+                Rows {currentBlock.rowStart} to {currentBlock.rowEnd} • Max {maxSeats} seats
+              </p>
+            </div>
+
+            {/* "Best Available (2 seats)" quick picker */}
+            <button
+              onClick={() => {
+                const availableInBlock = allSeats.filter(
+                  (s) => s.blockId === currentBlock.id && !soldKeys.includes(`${s.row}-${s.number}`)
+                );
+                const unselected = availableInBlock.filter(
+                  (s) => !selectedSeats.some((sel) => getSeatId(sel) === getSeatId(s))
+                );
+                const toPick = unselected.slice(0, Math.min(2, maxSeats - selectedSeats.length));
+                toPick.forEach((seat) => {
+                  toggleSeat({
+                    sectionId: seat.sectionId,
+                    standId: seat.standId,
+                    standName: seat.standName,
+                    blockId: seat.blockId,
+                    blockLabel: seat.blockLabel,
+                    row: seat.row,
+                    number: seat.number,
+                    priceNPR: seat.priceNPR,
+                    tier: seat.tier,
+                  });
+                });
+                if (toPick.length > 0) {
+                  setAnnouncement(`Selected ${toPick.length} best available seats in Block ${currentBlock.label}.`);
+                }
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold text-white flex items-center gap-1.5 transition-all self-start sm:self-auto cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>{language === 'ne' ? 'उत्कृष्ट २ सिट छान्नुहोस्' : 'Best Available (2 Seats)'}</span>
+            </button>
+          </div>
+
+          {/* Accessible Legend without color alone */}
+          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-300 mb-3 p-2.5 rounded-xl bg-white/[0.03] border border-white/10">
+            <span className="text-muted font-bold text-[11px]">LEGEND:</span>
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded bg-white/10 border border-white/30 flex items-center justify-center text-[10px] font-bold text-white">1</div>
+              <span>Available</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded bg-[#dc143c] border-2 border-white flex items-center justify-center text-white"><Check className="w-3 h-3" /></div>
+              <span>Selected</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-500"><X className="w-2.5 h-2.5" /></div>
+              <span>Sold out</span>
             </div>
           </div>
 
-          {/* Seat Grid */}
-          <div className="p-4 rounded-2xl bg-[#080c16] border border-white/10 space-y-3">
+          {/* Seat Grid with full ARIA & keyboard focus */}
+          <div 
+            role="grid" 
+            aria-label={`Block ${currentBlock.label} Seats Grid`} 
+            className="p-4 rounded-2xl bg-[#080c16] border border-white/10 space-y-3"
+          >
             {['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'P']
               .filter((r) => r >= currentBlock.rowStart && r <= currentBlock.rowEnd)
               .map((rowLetter) => {
@@ -286,8 +353,11 @@ export const VenueMap2D: React.FC<VenueMap2DProps> = ({
                 if (rowSeats.length === 0) return null;
 
                 return (
-                  <div key={rowLetter} className="flex items-center gap-2">
-                    <span className="w-8 text-xs font-bold text-muted text-right">
+                  <div key={rowLetter} role="row" className="flex items-center gap-2">
+                    <span 
+                      className="w-8 text-xs font-bold text-muted text-right select-none"
+                      aria-label={`Row ${rowLetter}`}
+                    >
                       {rowLetter}
                     </span>
                     <div className="flex flex-wrap items-center gap-1.5 flex-1">
@@ -295,35 +365,55 @@ export const VenueMap2D: React.FC<VenueMap2DProps> = ({
                         const seatKey = `${seat.row}-${seat.number}`;
                         const isSold = soldKeys.includes(seatKey);
                         const isSelected = selectedSeats.some(
-                          (sel) => sel.sectionId === seat.sectionId && `${sel.row}-${sel.number}` === seatKey
+                          (sel) => getSeatId(sel) === getSeatId(seat)
                         );
+
+                        const ariaLabel = `Row ${seat.row}, seat ${seat.number}, ${isSold ? 'sold' : isSelected ? 'selected' : 'available'}, NPR ${seat.priceNPR}`;
 
                         return (
                           <button
                             key={seat.instanceId}
+                            role="gridcell"
+                            tabIndex={isSold ? -1 : 0}
                             disabled={isSold}
+                            aria-selected={isSelected}
+                            aria-label={ariaLabel}
                             onClick={() => {
-                              toggleSeat({
+                              const outcome = toggleSeat({
                                 sectionId: seat.sectionId,
+                                standId: seat.standId,
+                                standName: seat.standName,
+                                blockId: seat.blockId,
+                                blockLabel: seat.blockLabel,
                                 row: seat.row,
                                 number: seat.number,
                                 priceNPR: seat.priceNPR,
                                 tier: seat.tier,
-                                blockId: seat.blockId,
-                                blockLabel: seat.blockLabel,
                               });
+                              setAnnouncement(
+                                isSelected
+                                  ? `Row ${seat.row}, seat ${seat.number} removed`
+                                  : outcome.success
+                                  ? `Row ${seat.row}, seat ${seat.number}, ${seat.tier}, NPR ${seat.priceNPR}, selected`
+                                  : `Seat limit of ${maxSeats} reached.`
+                              );
                             }}
-                            className={`w-7 h-7 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center ${
+                            className={`w-7 h-7 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center cursor-pointer focus:ring-2 focus:ring-amber-400 focus:outline-none ${
                               isSelected
-                                ? 'bg-primary text-white shadow-glow-primary'
+                                ? 'bg-[#dc143c] text-white border-2 border-white font-black shadow-glow-crimson scale-105'
                                 : isSold
-                                ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                                : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/15 active:scale-95'
+                                ? 'bg-slate-900 border border-slate-700/60 text-slate-500 cursor-not-allowed line-through'
+                                : 'bg-white/10 hover:bg-white/20 text-white/90 border border-white/25 active:scale-95'
                             }`}
-                            title={`Row ${seat.row} #${seat.number} • NPR ${seat.priceNPR}`}
-                            aria-label={`Row ${seat.row} Seat ${seat.number}`}
+                            title={ariaLabel}
                           >
-                            {isSelected ? <Check className="w-3.5 h-3.5" /> : seat.number}
+                            {isSelected ? (
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                            ) : isSold ? (
+                              <X className="w-2.5 h-2.5 text-slate-500" />
+                            ) : (
+                              seat.number
+                            )}
                           </button>
                         );
                       })}

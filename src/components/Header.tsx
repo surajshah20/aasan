@@ -186,22 +186,24 @@ export const Header: React.FC = () => {
           </div>
         )}
 
-        {/* Right Controls: 3D toggle & Language switcher */}
+        {/* Right Controls: 3D / 2D toggle & Language switcher */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 z-10">
-          {/* Lite / 3D Mode Toggle (venue screen only) */}
-          {currentView === 'venue' && (
+          {/* Lite / 3D Mode Toggle (venue and landing screens) */}
+          {(currentView === 'venue' || currentView === 'landing') && (
             <button
               onClick={toggleLiteMode}
-              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
                 isLiteMode
-                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                  : 'bg-white/5 border-white/10 text-muted hover:text-white hover:bg-white/10'
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm'
+                  : 'bg-white/5 border-white/10 text-slate-300 hover:text-white hover:bg-white/10'
               }`}
-              title="Toggle 3D / 2D Lite Mode"
+              title={isLiteMode ? 'Switch to 3D View' : 'Switch to 2D Accessible View'}
+              aria-label={isLiteMode ? 'Switch to 3D View' : 'Switch to 2D Accessible View'}
+              aria-pressed={isLiteMode}
             >
-              <Layers className="w-3.5 h-3.5" />
+              <Layers className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden md:inline">
-                {isLiteMode ? t('lite_mode_active') : '3D Mode'}
+                {isLiteMode ? '2D Accessible View' : '3D View'}
               </span>
               <span className="md:hidden font-medium text-[11px]">
                 {isLiteMode ? '2D' : '3D'}

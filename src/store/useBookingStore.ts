@@ -54,7 +54,18 @@ interface BookingStoreState {
   getSoldSeatKeys: () => string[];
 }
 
-const initialLite = !isWebGLAvailable() || isLowEndDevice();
+const getInitialLiteMode = (): boolean => {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('aasan_view_mode_pref');
+      if (saved === '2d') return true;
+      if (saved === '3d') return false;
+    } catch {
+      // ignore
+    }
+  }
+  return !isWebGLAvailable() || isLowEndDevice();
+};
 
 export const useBookingStore = create<BookingStoreState>((set, get) => ({
   currentView: 'landing',
@@ -68,7 +79,7 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
   selectedBlockId: null,
   activeSeat: null,
   selectedSeats: [],
-  isLiteMode: initialLite,
+  isLiteMode: getInitialLiteMode(),
   lightingMode: 'evening',
   toastMessage: null,
   bookingResult: null,
@@ -289,9 +300,24 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
 
   clearSeats: () => set({ selectedSeats: [] }),
 
-  toggleLiteMode: () => set((state) => ({ isLiteMode: !state.isLiteMode })),
+  toggleLiteMode: () => {
+    const next = !get().isLiteMode;
+    try {
+      localStorage.setItem('aasan_view_mode_pref', next ? '2d' : '3d');
+    } catch {
+      // ignore
+    }
+    set({ isLiteMode: next });
+  },
 
-  setLiteMode: (enabled) => set({ isLiteMode: enabled }),
+  setLiteMode: (enabled) => {
+    try {
+      localStorage.setItem('aasan_view_mode_pref', enabled ? '2d' : '3d');
+    } catch {
+      // ignore
+    }
+    set({ isLiteMode: enabled });
+  },
 
   completeBooking: (booking) => set({ bookingResult: booking, currentView: 'ticket' }),
 

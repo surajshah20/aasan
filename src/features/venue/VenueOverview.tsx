@@ -30,6 +30,7 @@ export const VenueOverview: React.FC = () => {
     activeSeat,
     cameraMode,
     isLiteMode,
+    setLiteMode,
     selectSection,
     backToOverview,
     setView,
@@ -39,6 +40,7 @@ export const VenueOverview: React.FC = () => {
 
   const [hintVisible, setHintVisible] = useState(true);
   const [showInfoPopover, setShowInfoPopover] = useState(false);
+  const [showAutoSuggest2D, setShowAutoSuggest2D] = useState(false);
 
   const venues = venuesData as unknown as Venue[];
   const currentVenue = venues.find((v) => v.id === selectedVenueId) || venues[0];
@@ -56,6 +58,56 @@ export const VenueOverview: React.FC = () => {
     return () => clearTimeout(timer);
   }, [cameraMode]);
 
+  // Auto-suggest 2D banner for low-end / reduced motion / saveData / no WebGL
+  useEffect(() => {
+    if (isLiteMode) {
+      setShowAutoSuggest2D(false);
+      return;
+    }
+    const isDismissed = sessionStorage.getItem('aasan_dismiss_2d_banner') === 'true';
+    if (isDismissed) return;
+
+    let shouldSuggest = false;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('suggest2d') === 'true') {
+      shouldSuggest = true;
+    }
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      shouldSuggest = true;
+    }
+    const nav = navigator as any;
+    if (nav.connection && (nav.connection.saveData === true || ['slow-2g', '2g'].includes(nav.connection.effectiveType))) {
+      shouldSuggest = true;
+    }
+    if (nav.deviceMemory && nav.deviceMemory <= 4) {
+      shouldSuggest = true;
+    }
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) {
+        shouldSuggest = true;
+      }
+    } catch {
+      shouldSuggest = true;
+    }
+
+    if (shouldSuggest) {
+      setShowAutoSuggest2D(true);
+    }
+  }, [isLiteMode]);
+
+  const handleDismissBanner = () => {
+    setShowAutoSuggest2D(false);
+    sessionStorage.setItem('aasan_dismiss_2d_banner', 'true');
+  };
+
+  const handleAccept2D = () => {
+    setShowAutoSuggest2D(false);
+    sessionStorage.setItem('aasan_dismiss_2d_banner', 'true');
+    setLiteMode(true);
+  };
+
   return (
     <div 
       className="relative w-full h-full bg-bg overflow-hidden select-none"
@@ -64,6 +116,41 @@ export const VenueOverview: React.FC = () => {
         setShowInfoPopover(false);
       }}
     >
+      {/* Auto-suggest 2D Accessible Mode Banner */}
+      {showAutoSuggest2D && !isLiteMode && (
+        <div 
+          role="region"
+          aria-label="Display mode suggestion"
+          className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-xl animate-fadeIn"
+        >
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-[#111420]/95 backdrop-blur-xl border border-amber-500/50 shadow-2xl text-slate-100">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <p className="text-xs text-slate-200 leading-snug">
+                {language === 'ne'
+                  ? 'सुस्त गति वा सिमित डेटा पत्ता लाग्यो। के तपाईं २D पहुँचयोग्य दृश्य प्रयोग गर्न चाहनुहुन्छ?'
+                  : 'Low-power or reduced motion detected. Switch to fast 2D accessible view?'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleAccept2D}
+                className="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow transition-colors cursor-pointer"
+              >
+                {language === 'ne' ? '२D प्रयोग गर्नुहोस्' : 'Use 2D'}
+              </button>
+              <button
+                onClick={handleDismissBanner}
+                className="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                title="Dismiss"
+                aria-label="Dismiss banner"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Floating Glass Navigation Button (Top-left) */}
       {isInSeatView ? (
         <button

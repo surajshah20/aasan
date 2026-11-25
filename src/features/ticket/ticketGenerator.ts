@@ -250,15 +250,17 @@ export async function createSingleTicketCanvas(
   ctx.font = `800 23px ${FONT_DEVANAGARI}`;
   ctx.fillText(seat.fullLabel, 54, seatBoxY + 56);
 
-  // Row 5: Meta info: Price, Payment method, and Booking ID
+  // Row 5: Meta info: Attendee, Price, Payment method, and Booking ID
   const metaY = 345;
   ctx.fillStyle = '#0f172a';
-  ctx.font = `bold 14px ${FONT_LATIN}`;
-  ctx.fillText(`Price: NPR ${seat.priceNPR.toLocaleString()}`, 35, metaY);
+  ctx.font = `bold 13px ${FONT_DEVANAGARI}`;
+  const attendeeText = `Attendee: ${booking.customerName || 'Aasan Guest User'}`;
+  ctx.fillText(attendeeText, 35, metaY);
 
+  const attendeeWidth = ctx.measureText(attendeeText).width;
   ctx.fillStyle = '#475569';
-  ctx.font = `500 13px ${FONT_LATIN}`;
-  ctx.fillText(`· Paid via ${formattedPaymentMethod} (Demo Mode)`, 180, metaY);
+  ctx.font = `500 12px ${FONT_LATIN}`;
+  ctx.fillText(`· NPR ${seat.priceNPR.toLocaleString()} · ${formattedPaymentMethod} (Demo)`, 35 + attendeeWidth + 10, metaY);
 
   // Booking ID Monospace Pill
   ctx.save();
@@ -324,11 +326,12 @@ export async function createSingleTicketCanvas(
   ctx.font = `800 17px ${FONT_DEVANAGARI}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(seat.shortSeat, stubCenterX, 115);
+  ctx.fillText(seat.shortSeat, stubCenterX, 112);
 
   ctx.fillStyle = '#64748b';
-  ctx.font = `500 12px ${FONT_DEVANAGARI}`;
-  ctx.fillText(seat.blockLabel || seat.standName || (venue.type === 'cinema' ? 'Audi 1' : 'Block P1'), stubCenterX, 134);
+  ctx.font = `500 11px ${FONT_DEVANAGARI}`;
+  const stubSub = `${seat.blockLabel || seat.standName || (venue.type === 'cinema' ? 'Audi 1' : 'Block P1')} · ${booking.customerName || 'Guest'}`;
+  ctx.fillText(stubSub, stubCenterX, 130);
 
   // QR Code Generation onto Stub
   // QR encodes booking ID + seat

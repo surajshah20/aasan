@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
-  ArrowLeft
+  ArrowLeft,
+  User
 } from 'lucide-react';
 import { 
   generateTicketPDF, 
@@ -358,14 +359,13 @@ export const TicketView: React.FC = () => {
             </div>
           </div>
 
-          {/* Event Meta Grid - Requirement 2: Real venue name, no city twice; Requirement 6: formatted date */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-2xl bg-white/[0.02] border border-white/5 mb-6 text-xs">
+          {/* Event Meta Grid - Date, Venue & Attendee */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 p-4 rounded-2xl bg-white/[0.02] border border-white/5 mb-6 text-xs">
             <div>
               <p className="text-[10px] uppercase text-muted font-bold tracking-wider mb-1 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-sky-400" />
                 <span>{t('date_and_time')}</span>
               </p>
-              {/* Requirement 6: "Sat, 28 Nov 2026 · 1:15 PM" */}
               <p className="font-bold text-white text-sm">{formattedDateTime}</p>
               <p className="text-[11px] text-muted mt-0.5">{event?.subtitle?.[language] || event?.subtitle?.en}</p>
             </div>
@@ -375,9 +375,19 @@ export const TicketView: React.FC = () => {
                 <MapPin className="w-3.5 h-3.5 text-crimson" />
                 <span>{t('venue_location')}</span>
               </p>
-              {/* Requirement 2: Real venue name ("TU International Cricket Ground, Kirtipur" or hall & chain) */}
               <p className="font-bold text-white text-sm leading-snug">{venueHeadline}</p>
               <p className="text-[11px] text-muted mt-0.5">{venueSubline}</p>
+            </div>
+
+            <div>
+              <p className="text-[10px] uppercase text-muted font-bold tracking-wider mb-1 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{language === 'ne' ? 'टिकट धनी' : 'Ticket Holder'}</span>
+              </p>
+              <p className="font-bold text-white text-sm leading-snug">{booking.customerName || 'Aasan Guest User'}</p>
+              {booking.customerPhone && (
+                <p className="text-[11px] font-mono text-muted mt-0.5">{booking.customerPhone}</p>
+              )}
             </div>
           </div>
 

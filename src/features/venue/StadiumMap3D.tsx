@@ -102,27 +102,37 @@ const StadiumCameraRig: React.FC<{
 const ProceduralDayClouds: React.FC<{ isEvening: boolean }> = ({ isEvening }) => {
   const cloudsGroupRef = useRef<THREE.Group>(null);
 
+  // Soft Cumulus Cloud Puff Texture with natural billowy crests & shaded base
   const cloudTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
+    canvas.width = 512;
+    canvas.height = 512;
     const ctx = canvas.getContext('2d');
     if (ctx) {
+      // Soft cumulus lobe cluster
       const puffs = [
-        { x: 128, y: 128, r: 72, a: 0.38 },
-        { x: 86, y: 135, r: 56, a: 0.32 },
-        { x: 170, y: 130, r: 60, a: 0.34 },
-        { x: 55, y: 145, r: 40, a: 0.25 },
-        { x: 200, y: 140, r: 44, a: 0.26 },
-        { x: 106, y: 100, r: 50, a: 0.28 },
-        { x: 150, y: 98, r: 52, a: 0.30 },
+        // Flatter, slightly shaded base
+        { x: 256, y: 310, rx: 170, ry: 55, r: 120, a: 0.35, shade: 'rgba(220, 228, 238, ' },
+        { x: 180, y: 300, rx: 130, ry: 50, r: 90, a: 0.32, shade: 'rgba(222, 230, 240, ' },
+        { x: 330, y: 305, rx: 140, ry: 52, r: 95, a: 0.32, shade: 'rgba(222, 230, 240, ' },
+        // Middle body
+        { x: 256, y: 250, rx: 140, ry: 75, r: 115, a: 0.45, shade: 'rgba(242, 247, 252, ' },
+        { x: 170, y: 260, rx: 110, ry: 65, r: 95, a: 0.42, shade: 'rgba(240, 245, 250, ' },
+        { x: 340, y: 255, rx: 115, ry: 65, r: 98, a: 0.42, shade: 'rgba(240, 245, 250, ' },
+        // Upper billowy cumulus domes (bright white)
+        { x: 256, y: 180, rx: 105, ry: 80, r: 100, a: 0.65, shade: 'rgba(255, 255, 255, ' },
+        { x: 195, y: 200, rx: 85, ry: 70, r: 85, a: 0.58, shade: 'rgba(255, 255, 255, ' },
+        { x: 315, y: 195, rx: 90, ry: 70, r: 88, a: 0.58, shade: 'rgba(255, 255, 255, ' },
+        { x: 135, y: 235, rx: 65, ry: 50, r: 65, a: 0.40, shade: 'rgba(252, 254, 255, ' },
+        { x: 375, y: 230, rx: 70, ry: 50, r: 68, a: 0.40, shade: 'rgba(252, 254, 255, ' },
       ];
+
       puffs.forEach((p) => {
         const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-        g.addColorStop(0.00, `rgba(255, 255, 255, ${p.a})`);
-        g.addColorStop(0.55, `rgba(252, 254, 255, ${p.a * 0.65})`);
-        g.addColorStop(0.85, `rgba(240, 248, 255, ${p.a * 0.18})`);
-        g.addColorStop(1.00, 'rgba(255, 255, 255, 0.0)');
+        g.addColorStop(0.00, `${p.shade}${p.a})`);
+        g.addColorStop(0.50, `${p.shade}${(p.a * 0.72).toFixed(2)})`);
+        g.addColorStop(0.82, `${p.shade}${(p.a * 0.22).toFixed(2)})`);
+        g.addColorStop(1.00, `${p.shade}0.0)`);
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
@@ -130,6 +140,7 @@ const ProceduralDayClouds: React.FC<{ isEvening: boolean }> = ({ isEvening }) =>
       });
     }
     const t = new THREE.CanvasTexture(canvas);
+    t.generateMipmaps = true;
     return t;
   }, []);
 
@@ -137,25 +148,26 @@ const ProceduralDayClouds: React.FC<{ isEvening: boolean }> = ({ isEvening }) =>
     return new THREE.MeshBasicMaterial({
       map: cloudTexture,
       transparent: true,
-      opacity: isEvening ? 0.0 : 0.82,
+      opacity: isEvening ? 0.0 : 0.85,
       depthWrite: false,
     });
   }, [cloudTexture, isEvening]);
 
+  // A few soft cumulus cloud clusters drifting slowly across the sky
   const cloudPuffs = useMemo(() => {
     const arr: Array<{ pos: [number, number, number]; scale: [number, number, number]; rotZ: number }> = [];
-    const count = 16;
+    const count = 8;
     for (let i = 0; i < count; i++) {
-      const ang = (i / count) * Math.PI * 2 + Math.sin(i * 3.7) * 0.25;
-      const rad = 170 + (Math.sin(i * 7.1) * 0.5 + 0.5) * 230;
-      const y = 165 + (Math.cos(i * 4.9) * 0.5 + 0.5) * 55;
+      const ang = (i / count) * Math.PI * 2 + Math.sin(i * 2.9) * 0.35;
+      const rad = 200 + (Math.sin(i * 5.3) * 0.5 + 0.5) * 160;
+      const y = 195 + (Math.cos(i * 3.7) * 0.5 + 0.5) * 45;
       const x = Math.cos(ang) * rad;
       const z = Math.sin(ang) * rad;
-      const s = 70 + (Math.sin(i * 2.3) * 0.5 + 0.5) * 60;
+      const s = 110 + (Math.sin(i * 4.1) * 0.5 + 0.5) * 65;
       arr.push({
         pos: [x, y, z],
-        scale: [s * 1.5, s * 1.1, 1],
-        rotZ: ang + (i * 0.4),
+        scale: [s * 1.8, s * 1.05, 1],
+        rotZ: ang * 0.15 + (i * 0.2),
       });
     }
     return arr;
@@ -166,11 +178,12 @@ const ProceduralDayClouds: React.FC<{ isEvening: boolean }> = ({ isEvening }) =>
       typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+    // Drifts very slowly across the sky; strictly respects prefers-reduced-motion
     if (!prefersReducedMotion && cloudsGroupRef.current) {
-      cloudsGroupRef.current.rotation.y += delta * 0.0022;
+      cloudsGroupRef.current.rotation.y += delta * 0.0006;
     }
 
-    const targetOpacity = isEvening ? 0.0 : 0.82;
+    const targetOpacity = isEvening ? 0.0 : 0.85;
     cloudMaterial.opacity = THREE.MathUtils.damp(cloudMaterial.opacity, targetOpacity, 3.2, delta);
     cloudMaterial.visible = cloudMaterial.opacity > 0.01;
   });
@@ -593,10 +606,12 @@ const ProceduralCricketField: React.FC<{ isEvening: boolean }> = ({ isEvening })
     }
 
     // In day mode: Believable natural valley surface
-    // Mix of dry earth and short green grass in open areas,
-    // grey concrete / asphalt paths around outer wall and under towers,
-    // subtle noise / texture, and soft fade to horizon.
-    const size = 1024;
+    // 1. Concrete apron: irregular, warmer grey surface (about #9a9a96) with access paths,
+    //    simple car park area, grass and dirt creeping in at edges, subtle cracks/noise (no hard circular edge).
+    // 2. Shadow under outer wall: soft, light ambient contact (25-35% opacity, wide blur, no black pool).
+    // 3. Ground texture: finer tiled grass texture with color variation (lighter/darker green, dry areas),
+    //    anisotropy & mipmaps to prevent stretching or smearing near screen edges.
+    const size = 2048;
     const canvas = document.createElement('canvas');
     canvas.width = size;
     canvas.height = size;
@@ -604,11 +619,11 @@ const ProceduralCricketField: React.FC<{ isEvening: boolean }> = ({ isEvening })
     if (ctx) {
       const cx = size / 2;
       const cy = size / 2;
-      // 1 meter in 3D scene = 512px / 340m = 1.5058px
-      const m2px = 512 / 340;
+      // 1 meter in 3D scene = 1024px / 340m = 3.0117px
+      const m2px = 1024 / 340;
 
-      // Base: warm dry earth / clay loam
-      ctx.fillStyle = '#83745c';
+      // Base terrain: warm natural valley loam
+      ctx.fillStyle = '#6c7757';
       ctx.fillRect(0, 0, size, size);
 
       // Deterministic PRNG for consistent organic mottling
@@ -617,94 +632,198 @@ const ProceduralCricketField: React.FC<{ isEvening: boolean }> = ({ isEvening })
         return x - Math.floor(x);
       };
 
-      // Layer 1: Dry sandy-earth loam patches across ground
-      for (let i = 0; i < 460; i++) {
+      // Layer 1: Dry clay & loam earth patches across the valley floor
+      for (let i = 0; i < 650; i++) {
         const ang = rng(i * 1.7) * Math.PI * 2;
-        const dist = (55 + rng(i * 3.3) * 205) * m2px;
+        const dist = (45 + rng(i * 3.3) * 230) * m2px;
         const px = cx + Math.cos(ang) * dist;
         const py = cy + Math.sin(ang) * dist;
-        const rad = (14 + rng(i * 7.1) * 32) * m2px;
+        const rad = (16 + rng(i * 7.1) * 38) * m2px;
         const g = ctx.createRadialGradient(px, py, 0, px, py, rad);
-        g.addColorStop(0.00, 'rgba(148, 131, 106, 0.45)');
-        g.addColorStop(0.65, 'rgba(136, 119, 94, 0.22)');
-        g.addColorStop(1.00, 'rgba(136, 119, 94, 0.0)');
+        g.addColorStop(0.00, 'rgba(142, 126, 100, 0.45)');
+        g.addColorStop(0.60, 'rgba(132, 116, 92, 0.22)');
+        g.addColorStop(1.00, 'rgba(132, 116, 92, 0.0)');
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(px, py, rad, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Layer 2: Short hardy green grass clusters in open meadow areas
-      for (let i = 0; i < 580; i++) {
-        const ang = rng(i * 2.9 + 50) * Math.PI * 2;
-        const dist = (65 + rng(i * 4.1 + 80) * 195) * m2px;
+      // Layer 2: Sunlit pale yellow-green meadow patches
+      for (let i = 0; i < 750; i++) {
+        const ang = rng(i * 2.3 + 30) * Math.PI * 2;
+        const dist = (50 + rng(i * 3.9 + 40) * 225) * m2px;
         const px = cx + Math.cos(ang) * dist;
         const py = cy + Math.sin(ang) * dist;
-        const rad = (12 + rng(i * 5.7) * 28) * m2px;
+        const rad = (14 + rng(i * 6.3) * 35) * m2px;
         const g = ctx.createRadialGradient(px, py, 0, px, py, rad);
-        const cA = 0.28 + rng(i * 9.1) * 0.32;
-        g.addColorStop(0.00, `rgba(88, 118, 72, ${cA.toFixed(2)})`);
-        g.addColorStop(0.60, `rgba(102, 132, 85, ${(cA * 0.6).toFixed(2)})`);
-        g.addColorStop(1.00, 'rgba(92, 122, 76, 0.0)');
+        const cA = 0.30 + rng(i * 8.7) * 0.32;
+        g.addColorStop(0.00, `rgba(128, 154, 102, ${cA.toFixed(2)})`);
+        g.addColorStop(0.65, `rgba(118, 144, 92, ${(cA * 0.55).toFixed(2)})`);
+        g.addColorStop(1.00, 'rgba(118, 144, 92, 0.0)');
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(px, py, rad, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Layer 3: Fine stipple noise for tactile surface grain
+      // Layer 3: Lush hardy dark green grass clusters
+      for (let i = 0; i < 820; i++) {
+        const ang = rng(i * 2.9 + 80) * Math.PI * 2;
+        const dist = (55 + rng(i * 4.3 + 90) * 220) * m2px;
+        const px = cx + Math.cos(ang) * dist;
+        const py = cy + Math.sin(ang) * dist;
+        const rad = (12 + rng(i * 5.7) * 30) * m2px;
+        const g = ctx.createRadialGradient(px, py, 0, px, py, rad);
+        const cA = 0.32 + rng(i * 9.1) * 0.30;
+        g.addColorStop(0.00, `rgba(82, 114, 68, ${cA.toFixed(2)})`);
+        g.addColorStop(0.60, `rgba(94, 126, 78, ${(cA * 0.55).toFixed(2)})`);
+        g.addColorStop(1.00, 'rgba(84, 116, 70, 0.0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(px, py, rad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Layer 4: Fine high-frequency stipple noise & grass blade speckles for tactile surface grain (no smearing)
       const imgData = ctx.getImageData(0, 0, size, size);
       const d = imgData.data;
       for (let p = 0; p < d.length; p += 4) {
-        const n = (((p * 13) % 29) - 14) * 0.75;
+        const n = (((p * 17) % 31) - 15) * 0.65;
         d[p] = Math.max(0, Math.min(255, d[p] + n));
         d[p + 1] = Math.max(0, Math.min(255, d[p + 1] + n));
         d[p + 2] = Math.max(0, Math.min(255, d[p + 2] + n));
       }
       ctx.putImageData(imgData, 0, 0);
 
-      // Layer 4: Grey concrete / asphalt perimeter concourse & ring road around outer wall
-      const pathRx0 = 79 * m2px;
-      const pathRz0 = 89 * m2px;
-      const pathRx1 = 105 * m2px;
-      const pathRz1 = 115 * m2px;
+      // Layer 5: Concrete Apron - Irregular, warmer grey (#9a9a96) perimeter around outer wall
+      // NO hard circular edge: harmonic angular modulation creates realistic natural perimeter
+      const apronPoints: [number, number][] = [];
+      const steps = 128;
+      for (let s = 0; s < steps; s++) {
+        const theta = (s / steps) * Math.PI * 2;
+        const rMod =
+          Math.sin(theta * 3) * 6.5 +
+          Math.cos(theta * 5) * 4.2 +
+          Math.sin(theta * 8) * 3.0 +
+          (rng(s * 3.1) - 0.5) * 4.0;
+        const rx = (100 + rMod) * m2px;
+        const rz = (112 + rMod) * m2px;
+        apronPoints.push([cx + Math.cos(theta) * rx, cy + Math.sin(theta) * rz]);
+      }
 
       ctx.save();
       ctx.beginPath();
-      ctx.ellipse(cx, cy, pathRx1, pathRz1, 0, 0, Math.PI * 2);
-      ctx.fillStyle = '#78828e';
+      ctx.moveTo(apronPoints[0][0], apronPoints[0][1]);
+      for (let s = 1; s < apronPoints.length; s++) {
+        ctx.lineTo(apronPoints[s][0], apronPoints[s][1]);
+      }
+      ctx.closePath();
+      ctx.fillStyle = '#9a9a96'; // Warmer grey concrete apron
       ctx.fill();
 
-      // Inner cutout for the stadium bowl footprint
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, pathRx0, pathRz0, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      // Concourse surface texture & subtle joint rings
-      ctx.save();
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, (pathRx0 + pathRx1) / 2, (pathRz0 + pathRz1) / 2, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(98, 107, 118, 0.45)';
-      ctx.lineWidth = 1.5;
+      // Concrete apron surface variation & subtle expansion joints
+      ctx.strokeStyle = 'rgba(125, 125, 120, 0.4)';
+      ctx.lineWidth = 1.6;
       ctx.stroke();
 
-      // Radial joint lines around perimeter concourse
-      for (let j = 0; j < 36; j++) {
-        const ja = (j / 36) * Math.PI * 2;
+      // Radial expansion joint lines
+      for (let j = 0; j < 48; j++) {
+        const ja = (j / 48) * Math.PI * 2;
         const cosA = Math.cos(ja);
         const sinA = Math.sin(ja);
+        const r0 = (81 + (j % 2) * 2) * m2px;
+        const r1 = (98 + (j % 3) * 3) * m2px;
         ctx.beginPath();
-        ctx.moveTo(cx + cosA * pathRx0, cy + sinA * pathRz0);
-        ctx.lineTo(cx + cosA * pathRx1, cy + sinA * pathRz1);
-        ctx.strokeStyle = 'rgba(80, 88, 98, 0.35)';
+        ctx.moveTo(cx + cosA * r0, cy + sinA * r0);
+        ctx.lineTo(cx + cosA * r1, cy + sinA * r1);
+        ctx.strokeStyle = 'rgba(110, 110, 106, 0.32)';
         ctx.lineWidth = 1.2;
         ctx.stroke();
       }
-      ctx.restore();
 
-      // Layer 5: Concrete pads and service walkways under the 6 floodlight towers & structures
+      // Hairline weathering cracks on concrete apron
+      for (let c = 0; c < 24; c++) {
+        const ca = rng(c * 5.7) * Math.PI * 2;
+        const cr = (86 + rng(c * 2.3) * 16) * m2px;
+        let cpx = cx + Math.cos(ca) * cr;
+        let cpy = cy + Math.sin(ca) * cr;
+        ctx.beginPath();
+        ctx.moveTo(cpx, cpy);
+        for (let seg = 0; seg < 4; seg++) {
+          cpx += (rng(c * 11 + seg) - 0.5) * 12 * m2px;
+          cpy += (rng(c * 13 + seg) - 0.5) * 12 * m2px;
+          ctx.lineTo(cpx, cpy);
+        }
+        ctx.strokeStyle = 'rgba(92, 92, 88, 0.28)';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      }
+
+      // Layer 5b: Access Paths extending out into the surroundings
+      // South Spectator Main Road (towards highway & main entrance)
+      ctx.fillStyle = '#949490';
+      ctx.beginPath();
+      ctx.moveTo(cx - 7 * m2px, cy + 96 * m2px);
+      ctx.lineTo(cx + 7 * m2px, cy + 96 * m2px);
+      ctx.lineTo(cx + 9 * m2px, cy + 225 * m2px);
+      ctx.lineTo(cx - 9 * m2px, cy + 225 * m2px);
+      ctx.closePath();
+      ctx.fill();
+
+      // East Service Access Lane (broadcasting / delivery)
+      ctx.beginPath();
+      ctx.moveTo(cx + 92 * m2px, cy - 6 * m2px);
+      ctx.lineTo(cx + 92 * m2px, cy + 6 * m2px);
+      ctx.lineTo(cx + 195 * m2px, cy + 12 * m2px);
+      ctx.lineTo(cx + 195 * m2px, cy - 2 * m2px);
+      ctx.closePath();
+      ctx.fill();
+
+      // North-West Team & Official Access Path
+      ctx.beginPath();
+      ctx.moveTo(cx - 78 * m2px, cy - 88 * m2px);
+      ctx.lineTo(cx - 68 * m2px, cy - 94 * m2px);
+      ctx.lineTo(cx - 145 * m2px, cy - 155 * m2px);
+      ctx.lineTo(cx - 154 * m2px, cy - 147 * m2px);
+      ctx.closePath();
+      ctx.fill();
+
+      // Layer 5c: Simple Car Park Area on South-West side (outside Pavilion & spectator concourse)
+      const pkX0 = cx - 146 * m2px;
+      const pkY0 = cy + 68 * m2px;
+      const pkW = 54 * m2px;
+      const pkH = 62 * m2px;
+      ctx.fillStyle = '#92928e';
+      ctx.fillRect(pkX0, pkY0, pkW, pkH);
+
+      // Car park stall bays (2 rows with driving lane in between)
+      ctx.strokeStyle = 'rgba(235, 235, 225, 0.45)';
+      ctx.lineWidth = 1.4;
+      for (let s = 0; s < 9; s++) {
+        const sy = pkY0 + 6 * m2px + s * 5.6 * m2px;
+        // West row stalls
+        ctx.beginPath();
+        ctx.moveTo(pkX0 + 2 * m2px, sy);
+        ctx.lineTo(pkX0 + 17 * m2px, sy);
+        ctx.stroke();
+        // East row stalls
+        ctx.beginPath();
+        ctx.moveTo(pkX0 + 36 * m2px, sy);
+        ctx.lineTo(pkX0 + 51 * m2px, sy);
+        ctx.stroke();
+      }
+
+      // Connecting driveway from apron to car park
+      ctx.beginPath();
+      ctx.moveTo(cx - 86 * m2px, cy + 78 * m2px);
+      ctx.lineTo(cx - 96 * m2px, cy + 96 * m2px);
+      ctx.lineTo(pkX0 + pkW, pkY0 + pkH * 0.6);
+      ctx.lineTo(pkX0 + pkW, pkY0 + pkH * 0.3);
+      ctx.closePath();
+      ctx.fill();
+
+      // Layer 5d: Concrete pads & spur walkways under the 6 floodlight towers & scoreboard
       const towerLocations: [number, number][] = [
         [88, -48], [88, 10], [88, 72],
         [-88, -72], [-88, 48], [-88, -10],
@@ -714,42 +833,76 @@ const ProceduralCricketField: React.FC<{ isEvening: boolean }> = ({ isEvening })
       towerLocations.forEach(([tx, tz]) => {
         const tpx = cx + tx * m2px;
         const tpy = cy + tz * m2px;
-        // Concrete pad
-        ctx.fillStyle = '#7c8692';
+        ctx.fillStyle = '#989894';
         ctx.beginPath();
-        ctx.arc(tpx, tpy, 9 * m2px, 0, Math.PI * 2);
+        ctx.arc(tpx, tpy, 8.5 * m2px, 0, Math.PI * 2);
         ctx.fill();
-        // Spur walkway connecting pad to concourse
-        ctx.strokeStyle = '#78828e';
-        ctx.lineWidth = 5 * m2px;
+        // Spur walkway connecting pad to apron
+        ctx.strokeStyle = '#949490';
+        ctx.lineWidth = 4.8 * m2px;
         ctx.beginPath();
         ctx.moveTo(tpx, tpy);
         const dir = Math.hypot(tx, tz);
-        ctx.lineTo(cx + (tx / dir) * 85 * m2px, cy + (tz / dir) * 95 * m2px);
+        ctx.lineTo(cx + (tx / dir) * 88 * m2px, cy + (tz / dir) * 98 * m2px);
         ctx.stroke();
       });
 
-      // Layer 6: Soft contact shadow where outer wall meets the ground
-      ctx.save();
+      // Layer 5e: Grass and dirt creeping in at the edges (feathers perimeter; no hard edge)
+      for (let g = 0; g < 720; g++) {
+        const ga = rng(g * 3.7) * Math.PI * 2;
+        const gOffset = Math.sin(ga * 3) * 6.5 + Math.cos(ga * 5) * 4.2 + (rng(g * 2.1) - 0.5) * 8.0;
+        const baseR = (rng(g * 5.1) > 0.4 ? 104 : 96) + gOffset;
+        const gx = cx + Math.cos(ga) * (baseR * m2px);
+        const gy = cy + Math.sin(ga) * (baseR * 1.12 * m2px);
+        const grad = (3.5 + rng(g * 7.9) * 8.0) * m2px;
+        const isDirt = rng(g * 11.3) > 0.45;
+        const col = isDirt ? 'rgba(128, 115, 94, ' : 'rgba(102, 128, 82, ';
+        const alpha = 0.25 + rng(g * 9.7) * 0.35;
+        const gRad = ctx.createRadialGradient(gx, gy, 0, gx, gy, grad);
+        gRad.addColorStop(0.00, `${col}${alpha.toFixed(2)})`);
+        gRad.addColorStop(0.65, `${col}${(alpha * 0.5).toFixed(2)})`);
+        gRad.addColorStop(1.00, `${col}0.0)`);
+        ctx.fillStyle = gRad;
+        ctx.beginPath();
+        ctx.arc(gx, gy, grad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Inner cutout for the stadium bowl footprint
+      ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
-      ctx.ellipse(cx, cy, 80.5 * m2px, 90.5 * m2px, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(20, 26, 34, 0.45)';
-      ctx.lineWidth = 14;
-      ctx.stroke();
+      ctx.ellipse(cx, cy, 79.5 * m2px, 89.5 * m2px, 0, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
 
-      // Layer 7: Soft fade to the horizon so there is NO visible disc edge
-      const fadeGrad = ctx.createRadialGradient(cx, cy, 215 * m2px, cx, cy, 340 * m2px);
-      fadeGrad.addColorStop(0.00, 'rgba(150, 184, 210, 0.0)');
-      fadeGrad.addColorStop(0.65, 'rgba(150, 184, 210, 0.65)');
-      fadeGrad.addColorStop(0.92, 'rgba(150, 184, 210, 0.95)');
-      fadeGrad.addColorStop(1.00, 'rgba(150, 184, 210, 1.0)');
+      // Layer 6: Soft, light contact shadow under outer wall (25-35% opacity, wide blur, NO black pool)
+      ctx.save();
+      const shadowGrad = ctx.createRadialGradient(cx, cy, 78.5 * m2px, cx, cy, 84.5 * m2px);
+      shadowGrad.addColorStop(0.00, 'rgba(42, 40, 36, 0.28)');
+      shadowGrad.addColorStop(0.50, 'rgba(42, 40, 36, 0.14)');
+      shadowGrad.addColorStop(1.00, 'rgba(42, 40, 36, 0.0)');
+      ctx.fillStyle = shadowGrad;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 85.5 * m2px, 95.5 * m2px, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Layer 7: Gentle fade to the horizon into atmospheric haze (smooth blend, no stretching)
+      const fadeGrad = ctx.createRadialGradient(cx, cy, 235 * m2px, cx, cy, 340 * m2px);
+      fadeGrad.addColorStop(0.00, 'rgba(164, 194, 218, 0.0)');
+      fadeGrad.addColorStop(0.65, 'rgba(164, 194, 218, 0.45)');
+      fadeGrad.addColorStop(0.88, 'rgba(164, 194, 218, 0.85)');
+      fadeGrad.addColorStop(1.00, 'rgba(164, 194, 218, 1.0)');
       ctx.fillStyle = fadeGrad;
       ctx.fillRect(0, 0, size, size);
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.ClampToEdgeWrapping;
     tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.anisotropy = 8;
     return tex;
   }, [isEvening]);
 
@@ -1290,13 +1443,13 @@ const ProceduralStadiumBowl: React.FC<{ isEvening?: boolean }> = ({ isEvening })
         const isPanelSeam = (a % 3 === 0);
         const midPY = pY * 0.45;
 
-        // Base contact shadow where wall meets the ground (darker concrete shadow)
-        const cBase0: [number, number, number] = isPanelSeam ? [0.26, 0.28, 0.32] : [0.35, 0.38, 0.42];
-        const cBase1: [number, number, number] = [0.35, 0.38, 0.42];
-        const cMid0: [number, number, number] = isPanelSeam ? [0.38, 0.41, 0.46] : [0.52, 0.56, 0.61];
-        const cMid1: [number, number, number] = [0.52, 0.56, 0.61];
-        const cTop0: [number, number, number] = isPanelSeam ? [0.46, 0.50, 0.55] : [0.68, 0.71, 0.75];
-        const cTop1: [number, number, number] = [0.68, 0.71, 0.75];
+        // Base contact shadow where wall meets the ground (soft warm precast concrete, no black pool)
+        const cBase0: [number, number, number] = isPanelSeam ? [0.48, 0.49, 0.48] : [0.56, 0.57, 0.56];
+        const cBase1: [number, number, number] = [0.56, 0.57, 0.56];
+        const cMid0: [number, number, number] = isPanelSeam ? [0.58, 0.59, 0.58] : [0.65, 0.66, 0.65];
+        const cMid1: [number, number, number] = [0.65, 0.66, 0.65];
+        const cTop0: [number, number, number] = isPanelSeam ? [0.68, 0.69, 0.68] : [0.74, 0.75, 0.74];
+        const cTop1: [number, number, number] = [0.74, 0.75, 0.74];
 
         const owM0: [number, number, number] = [(Rx + capR) * cos0, midPY, (Rz + capR) * sin0];
         const owM1: [number, number, number] = [(Rx + capR) * cos1, midPY, (Rz + capR) * sin1];
@@ -1524,6 +1677,77 @@ const ProceduralStadiumDetails: React.FC<{
     return tex;
   }, []);
 
+  // Stadium floodlight lamp face in Day Mode: crisp precision 10 cols x 6 rows reflector cell grid with faint sky reflections
+  const lampDayFaceTexture = useMemo(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // Dark reflector base
+      ctx.fillStyle = '#161d24';
+      ctx.fillRect(0, 0, 1024, 512);
+
+      const cols = 10;
+      const rows = 6;
+      const cellW = 1024 / cols;
+      const cellH = 512 / rows;
+
+      // Draw each modular reflector cell
+      for (let c = 0; c < cols; c++) {
+        for (let r = 0; r < rows; r++) {
+          const x0 = c * cellW;
+          const y0 = r * cellH;
+          const cx = (c + 0.5) * cellW;
+          const cy = (r + 0.5) * cellH;
+          const radius = Math.min(cellW, cellH) * 0.44;
+
+          // Recessed cell cup
+          ctx.fillStyle = '#1e2632';
+          ctx.fillRect(x0 + 2, y0 + 2, cellW - 4, cellH - 4);
+
+          // Precision cell border ribs
+          ctx.strokeStyle = '#384452';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x0 + 1, y0 + 1, cellW - 2, cellH - 2);
+
+          // Parabolic reflector rim with subtle sky reflection
+          const cupGrad = ctx.createRadialGradient(cx, cy, 3, cx, cy, radius);
+          cupGrad.addColorStop(0.0, '#3a4654');
+          cupGrad.addColorStop(0.40, '#2b3644');
+          cupGrad.addColorStop(0.75, '#202934');
+          cupGrad.addColorStop(1.0, '#161c24');
+          ctx.fillStyle = cupGrad;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Subtle sky reflection arc inside reflector cup
+          ctx.strokeStyle = 'rgba(180, 210, 240, 0.28)';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius * 0.72, Math.PI * 0.8, Math.PI * 1.6);
+          ctx.stroke();
+
+          // Circular outer bezel ring around lens socket
+          ctx.strokeStyle = '#475464';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius * 0.88, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      // Outer master grid frame
+      ctx.strokeStyle = '#4e5b6c';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(2, 2, 1020, 508);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.generateMipmaps = true;
+    return tex;
+  }, []);
+
   // Optical diffraction star flare with intense core and fine cross rays
   const starFlareTexture = useMemo(() => {
     const canvas = document.createElement('canvas');
@@ -1627,6 +1851,7 @@ const ProceduralStadiumDetails: React.FC<{
           starFlareTexture={starFlareTexture}
           headHazeTexture={headHazeTexture}
           lampFaceTexture={lampFaceTexture}
+          lampDayFaceTexture={lampDayFaceTexture}
         />
       ))}
 
@@ -1677,6 +1902,7 @@ const SingleFloodlightTower: React.FC<{
   starFlareTexture: THREE.Texture;
   headHazeTexture: THREE.Texture;
   lampFaceTexture: THREE.Texture;
+  lampDayFaceTexture: THREE.Texture;
 }> = ({
   tower,
   isEvening,
@@ -1686,6 +1912,7 @@ const SingleFloodlightTower: React.FC<{
   starFlareTexture,
   headHazeTexture,
   lampFaceTexture,
+  lampDayFaceTexture,
 }) => {
   const starFlareRef = useRef<THREE.Mesh>(null);
   const spotLightRef = useRef<THREE.SpotLight>(null);
@@ -2092,12 +2319,12 @@ const SingleFloodlightTower: React.FC<{
           />
         </mesh>
 
-        {/* Dark Reflector Panel Face Behind Lenses */}
+        {/* Dark Reflector Panel Face Behind Lenses with visible 10x6 precision grid */}
         <mesh position={[0, 1.0, 2.41]}>
           <planeGeometry args={[9.2, 5.2]} />
           <meshStandardMaterial
-            color={isEvening ? "#ffffff" : "#1a2028"}
-            map={isEvening ? lampFaceTexture : undefined}
+            color={isEvening ? "#ffffff" : "#ffffff"}
+            map={isEvening ? lampFaceTexture : lampDayFaceTexture}
             emissive={isEvening ? "#fffde8" : "#000000"}
             emissiveMap={isEvening ? lampFaceTexture : undefined}
             emissiveIntensity={isEvening ? 1.5 : 0.0}
@@ -2106,23 +2333,29 @@ const SingleFloodlightTower: React.FC<{
           />
         </mesh>
 
-        {/* 60 Micro-Lenses: Pale Glass with slight blue tint in Day Mode, High-Intensity Emissive in Night Mode */}
+        {/* 60 Micro-Lenses: Paler glass with faint sky reflection & visible grid frame, strictly no glow in Day Mode */}
         {[-4.05, -3.15, -2.25, -1.35, -0.45, 0.45, 1.35, 2.25, 3.15, 4.05].map((bx, bi) =>
           [-2.0, -1.2, -0.4, 0.4, 1.2, 2.0].map((by, ri) => (
-            <mesh
-              key={`bulb-${bi}-${ri}`}
-              position={[bx, 1.0 + by, 2.43]}
-              rotation={[Math.PI / 2, 0, 0]}
-            >
-              <cylinderGeometry args={[0.32, 0.38, 0.08, 10]} />
-              <meshStandardMaterial
-                color={isEvening ? "#ffffff" : "#d8e4eb"}
-                emissive={isEvening ? "#ffffff" : "#000000"}
-                emissiveIntensity={isEvening ? 3.2 : 0.0}
-                roughness={isEvening ? 0.08 : 0.15}
-                metalness={isEvening ? 0.20 : 0.42}
-              />
-            </mesh>
+            <group key={`bulb-grp-${bi}-${ri}`} position={[bx, 1.0 + by, 2.43]}>
+              {/* Outer lens bezel collar ring for crisp visible grid definition */}
+              {!isEvening && (
+                <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.01]}>
+                  <cylinderGeometry args={[0.35, 0.38, 0.04, 12]} />
+                  <meshStandardMaterial color="#2d3748" metalness={0.65} roughness={0.35} />
+                </mesh>
+              )}
+              {/* Lens face: paler glass with faint sky reflection, zero emissive in day */}
+              <mesh rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[0.31, 0.35, 0.07, 12]} />
+                <meshStandardMaterial
+                  color={isEvening ? "#ffffff" : "#f2f7fa"}
+                  emissive={isEvening ? "#ffffff" : "#000000"}
+                  emissiveIntensity={isEvening ? 3.2 : 0.0}
+                  roughness={isEvening ? 0.08 : 0.12}
+                  metalness={isEvening ? 0.20 : 0.52}
+                />
+              </mesh>
+            </group>
           ))
         )}
 
@@ -2644,19 +2877,19 @@ const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = (
       {/* Hemisphere fill: blends between night sky/earth and daytime azure/warm-earth */}
       <hemisphereLight
         ref={hemiRef}
-        args={[isEvening ? '#243248' : '#b8daf5', isEvening ? '#080a10' : '#7a7264', isEvening ? 0.45 : 1.38]}
+        args={[isEvening ? '#243248' : '#b8daf5', isEvening ? '#080a10' : '#888072', isEvening ? 0.45 : 1.42]}
       />
 
-      {/* Sun Directional Light: soft shadow edges (radius 8.0), 31% shadow opacity, single direction */}
+      {/* Sun Directional Light: soft shadow edges (radius 14.0), 28-32% shadow opacity, single direction (no black pool) */}
       <directionalLight
         ref={sunRef}
         position={[85, 125, 60]}
-        intensity={isEvening ? 0 : 0.95}
+        intensity={isEvening ? 0 : 0.72}
         color="#fffbf0"
         castShadow={!isLiteMode}
         shadow-mapSize={[2048, 2048]}
-        shadow-bias={-0.0004}
-        shadow-radius={8.0}
+        shadow-bias={-0.0003}
+        shadow-radius={14.0}
         shadow-camera-left={-130}
         shadow-camera-right={130}
         shadow-camera-top={130}
@@ -2668,7 +2901,7 @@ const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = (
       <directionalLight
         ref={fillRef}
         position={[-60, 65, -45]}
-        intensity={isEvening ? 0 : 0.68}
+        intensity={isEvening ? 0 : 0.88}
         color="#dbeafe"
       />
 

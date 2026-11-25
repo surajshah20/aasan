@@ -35,7 +35,8 @@ async function captureDayModeViews() {
     window.__BOOKING_STORE__.getState().selectVenue('tu_cricket_ground', 'event_tu_cricket_1');
     window.__BOOKING_STORE__.getState().returnToOverview();
   });
-  await sleep(3000);
+  await page.waitForFunction(() => !!window.__STADIUM_DRILL__, { timeout: 30000 });
+  await sleep(2000);
 
   // Helper to hide UI overlays before capturing
   async function hideChrome() {
@@ -180,8 +181,29 @@ async function captureDayModeViews() {
   console.log('Saved:', nightAerialPath);
   await restoreChrome();
 
+  // 6. Tower Close-up from Front (Day Mode) to verify paler glass lenses, visible grid, and sky reflection
+  console.log('6. Capturing Tower Close-up from FRONT (Day Mode)...');
+  await page.evaluate(() => {
+    const drill = window.__STADIUM_DRILL__;
+    if (drill) {
+      drill.setLightingMode('day');
+      drill.setCustomCamera({
+        pos: [60, 43.0, -7],
+        lookAt: [88, 44.0, -10],
+        fov: 46,
+        instant: true,
+      });
+    }
+  });
+  await sleep(2500);
+  await hideChrome();
+  const towerFrontPath = path.join(artifactDir, 'tower_day_front_closeup.png');
+  await page.screenshot({ path: towerFrontPath, fullPage: false });
+  console.log('Saved:', towerFrontPath);
+  await restoreChrome();
+
   await browser.close();
-  console.log('\nAll 5 verification views successfully captured!');
+  console.log('\nAll verification views successfully captured!');
 }
 
 captureDayModeViews().catch((err) => {

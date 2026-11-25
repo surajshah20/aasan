@@ -578,7 +578,7 @@ export const TicketView: React.FC = () => {
                 <div key={group.groupKey} className="rounded-2xl bg-white/[0.02] border border-white/5 p-3">
                   {/* Stand & Block Header when grouping */}
                   <div className="flex items-center justify-between text-xs font-bold text-sky-400 mb-2">
-                    <span className="truncate pr-2">{group.groupTitle}</span>
+                    <span className="pr-2 break-words" title={group.groupTitle}>{group.groupTitle}</span>
                     <span className="text-[10px] text-muted font-normal">
                       {group.seats.length} {group.seats.length === 1 ? 'seat' : 'seats'}
                     </span>
@@ -703,7 +703,7 @@ export const TicketView: React.FC = () => {
                     <h3 className="text-base font-bold text-white">
                       {processedSeats[activeCarouselIdx]?.shortSeat}
                     </h3>
-                    <p className="text-xs text-sky-400 font-medium truncate mt-0.5">
+                    <p className="text-xs text-sky-400 font-medium break-words mt-0.5">
                       {processedSeats[activeCarouselIdx]?.groupKey}
                     </p>
                     <p className="text-[11px] font-mono text-muted mt-1">

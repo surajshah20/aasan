@@ -11,10 +11,10 @@ export const App: React.FC = () => {
   const { currentView } = useBookingStore();
 
   return (
-    <div className="min-h-screen flex flex-col bg-bg text-text font-sans selection:bg-crimson selection:text-white overflow-hidden">
+    <div className={`${currentView === 'venue' ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col bg-bg text-text font-sans selection:bg-crimson selection:text-white`}>
       <Header />
       
-      <main className={currentView === 'venue' ? 'h-[calc(100vh-56px)] w-full overflow-hidden' : 'flex-1'}>
+      <main className={currentView === 'venue' ? 'flex-1 w-full overflow-hidden relative' : 'flex-1'}>
         {currentView === 'landing' && <LandingHero />}
         {currentView === 'venue' && <VenueOverview />}
         {currentView === 'checkout' && <MockCheckout />}

@@ -300,7 +300,7 @@ export const LandingHero: React.FC = () => {
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-base font-bold text-[#f1f5f9] truncate">
+                  <h4 className="text-base font-bold text-[#f1f5f9] leading-snug break-words">
                     Lalit Maya (ललित माया)
                   </h4>
                   <p className="text-xs text-slate-400 mt-0.5">

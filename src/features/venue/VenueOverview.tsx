@@ -91,7 +91,7 @@ export const VenueOverview: React.FC = () => {
       {isInSeatView && activeSeat && (
         <div className="absolute top-3.5 right-3 sm:right-5 z-30 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-full bg-[#060810]/85 backdrop-blur-xl border border-white/20 text-white shadow-2xl animate-fadeIn">
           <Eye className="w-3.5 h-3.5 text-crimson animate-pulse shrink-0" />
-          <span className="font-bold text-xs truncate max-w-[85px] sm:max-w-none">{activeSeat.sectionName}</span>
+          <span className="font-bold text-xs whitespace-nowrap" title={activeSeat.sectionName}>{activeSeat.sectionName}</span>
           <span className="text-white/30">•</span>
           <span className="text-white/80 text-xs whitespace-nowrap">
             <span className="hidden sm:inline">Row </span>{activeSeat.row} · #{activeSeat.number}

@@ -3434,7 +3434,8 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
                   selectBlock(null);
                   setStadiumLevel('stand');
                 }}
-                className={`font-semibold transition-colors hover:text-white truncate max-w-[100px] sm:max-w-none ${
+                title={currentStand.nameEn}
+                className={`font-semibold transition-colors hover:text-white whitespace-nowrap ${
                   stadiumLevel === 'stand' ? 'text-primary font-bold' : 'text-white/60'
                 }`}
               >

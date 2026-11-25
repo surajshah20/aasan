@@ -3190,6 +3190,7 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
           blockId: seat.blockId,
           blockLabel: seat.blockLabel,
           standId: seat.standId,
+          standName: seat.standName,
         });
 
         if (onSelectSection) onSelectSection(seat.sectionId);
@@ -3221,6 +3222,8 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
         tier: seat.tier,
         blockId: seat.blockId,
         blockLabel: seat.blockLabel,
+        standId: seat.standId,
+        standName: seat.standName,
       });
     });
 
@@ -3240,6 +3243,7 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
       blockId: firstSeat.blockId,
       blockLabel: firstSeat.blockLabel,
       standId: firstSeat.standId,
+      standName: firstSeat.standName,
     });
   };
 

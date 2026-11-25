@@ -173,6 +173,10 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
           priceNPR: activeSeat.priceNPR,
           tier: activeSeat.tier,
           isRestrictedView: activeSeat.isRestrictedView,
+          blockId: activeSeat.blockId,
+          blockLabel: activeSeat.blockLabel,
+          standId: activeSeat.standId,
+          standName: (activeSeat as any).standName,
         },
       ];
     }
@@ -203,6 +207,10 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
           priceNPR: activeSeat.priceNPR,
           tier: activeSeat.tier,
           isRestrictedView: activeSeat.isRestrictedView,
+          blockId: activeSeat.blockId,
+          blockLabel: activeSeat.blockLabel,
+          standId: activeSeat.standId,
+          standName: (activeSeat as any).standName,
         },
       ];
     }

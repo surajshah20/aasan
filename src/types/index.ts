@@ -102,6 +102,7 @@ export interface ActiveSeatView {
   blockId?: string;
   blockLabel?: string;
   standId?: string;
+  standName?: string;
 }
 
 export interface SelectedSeat {
@@ -113,6 +114,8 @@ export interface SelectedSeat {
   isRestrictedView?: boolean;
   blockId?: string;
   blockLabel?: string;
+  standId?: string;
+  standName?: string;
 }
 
 export interface Booking {

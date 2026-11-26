@@ -1119,6 +1119,8 @@ const TierSeatsMesh: React.FC<TierSeatsMeshProps> = ({
     mesh.computeBoundingSphere();
   }, [seatsData, selectedSeats, soldKeys, hoveredInstanceId, colors]);
 
+  const lastCinemaPointerMove = useRef(0);
+
   if (seatsData.length === 0) return null;
 
   return (
@@ -1129,6 +1131,9 @@ const TierSeatsMesh: React.FC<TierSeatsMeshProps> = ({
       frustumCulled={false}
       onPointerMove={(e) => {
         e.stopPropagation();
+        const now = performance.now();
+        if (now - lastCinemaPointerMove.current < 32) return; // ~30 Hz throttle
+        lastCinemaPointerMove.current = now;
         if (e.instanceId !== undefined && e.instanceId < seatsData.length) {
           onHoverSeat(seatsData[e.instanceId]);
         }
@@ -1293,19 +1298,18 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
   sections,
   onSelectSection,
 }) => {
-  const {
-    activeSeat,
-    flyToSeat,
-    returnToOverview,
-    cameraMode,
-    setCameraMode,
-    selectedSeats,
-    toggleSeat,
-    getSoldSeatKeys,
-    isLiteMode,
-    selectedVenueId,
-    setView,
-  } = useBookingStore();
+  // Narrow Zustand selectors to prevent unnecessary re-renders of the 3D scene
+  const activeSeat = useBookingStore((s) => s.activeSeat);
+  const flyToSeat = useBookingStore((s) => s.flyToSeat);
+  const returnToOverview = useBookingStore((s) => s.returnToOverview);
+  const cameraMode = useBookingStore((s) => s.cameraMode);
+  const setCameraMode = useBookingStore((s) => s.setCameraMode);
+  const selectedSeats = useBookingStore((s) => s.selectedSeats);
+  const toggleSeat = useBookingStore((s) => s.toggleSeat);
+  const getSoldSeatKeys = useBookingStore((s) => s.getSoldSeatKeys);
+  const isLiteMode = useBookingStore((s) => s.isLiteMode);
+  const selectedVenueId = useBookingStore((s) => s.selectedVenueId);
+  const setView = useBookingStore((s) => s.setView);
 
   const { language } = useT();
   const [hoveredSeat, setHoveredSeat] = useState<CinemaSeatInstance | null>(null);

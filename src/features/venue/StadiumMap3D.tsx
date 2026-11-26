@@ -2635,6 +2635,7 @@ const StadiumSeatsMesh: React.FC<{
   selectedSeats: any[];
   soldKeys: string[];
   activeSeat: any;
+  isInteractive: boolean;
   onPointerMove: (e: ThreeEvent<PointerEvent>, tier: 'lower' | 'upper') => void;
   onPointerOut: () => void;
   onClick: (e: ThreeEvent<MouseEvent>, tier: 'lower' | 'upper') => void;
@@ -2646,6 +2647,7 @@ const StadiumSeatsMesh: React.FC<{
   selectedSeats,
   soldKeys,
   activeSeat,
+  isInteractive,
   onPointerMove,
   onPointerOut,
   onClick,
@@ -2721,9 +2723,9 @@ const StadiumSeatsMesh: React.FC<{
         args={[seatGeometry, undefined, seatsData.length]}
         count={seatsData.length}
         frustumCulled={false}
-        onPointerMove={(e) => onPointerMove(e, tier)}
-        onPointerOut={onPointerOut}
-        onClick={(e) => onClick(e, tier)}
+        onPointerMove={isInteractive ? (e) => onPointerMove(e, tier) : undefined}
+        onPointerOut={isInteractive ? onPointerOut : undefined}
+        onClick={isInteractive ? (e) => onClick(e, tier) : undefined}
         castShadow
         receiveShadow
       >
@@ -2971,25 +2973,24 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
   sections,
   onSelectSection,
 }) => {
-  const {
-    stadiumLevel,
-    setStadiumLevel,
-    selectedStandId,
-    selectedBlockId,
-    selectStand,
-    selectBlock,
-    drillBack,
-    activeSeat,
-    flyToSeat,
-    cameraMode,
-    setCameraMode,
-    selectedSeats,
-    toggleSeat,
-    getSoldSeatKeys,
-    isLiteMode,
-    lightingMode,
-    setLightingMode,
-  } = useBookingStore();
+  // Narrow Zustand selectors to prevent unnecessary re-renders of the 3D scene
+  const stadiumLevel = useBookingStore((s) => s.stadiumLevel);
+  const setStadiumLevel = useBookingStore((s) => s.setStadiumLevel);
+  const selectedStandId = useBookingStore((s) => s.selectedStandId);
+  const selectedBlockId = useBookingStore((s) => s.selectedBlockId);
+  const selectStand = useBookingStore((s) => s.selectStand);
+  const selectBlock = useBookingStore((s) => s.selectBlock);
+  const drillBack = useBookingStore((s) => s.drillBack);
+  const activeSeat = useBookingStore((s) => s.activeSeat);
+  const flyToSeat = useBookingStore((s) => s.flyToSeat);
+  const cameraMode = useBookingStore((s) => s.cameraMode);
+  const setCameraMode = useBookingStore((s) => s.setCameraMode);
+  const selectedSeats = useBookingStore((s) => s.selectedSeats);
+  const toggleSeat = useBookingStore((s) => s.toggleSeat);
+  const getSoldSeatKeys = useBookingStore((s) => s.getSoldSeatKeys);
+  const isLiteMode = useBookingStore((s) => s.isLiteMode);
+  const lightingMode = useBookingStore((s) => s.lightingMode);
+  const setLightingMode = useBookingStore((s) => s.setLightingMode);
 
   const soldKeys = useMemo(() => getSoldSeatKeys(), [getSoldSeatKeys]);
 
@@ -3155,9 +3156,13 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
 
   // Raycasting on seats is only enabled in 'block' and 'seat' levels
   const isSeatInteractionActive = stadiumLevel === 'block' || stadiumLevel === 'seat';
+  const lastSeatPointerMoveRef = useRef(0);
 
   const handlePointerMoveSeat = (e: ThreeEvent<PointerEvent>, tier: 'lower' | 'upper') => {
     if (!isSeatInteractionActive) return;
+    const now = performance.now();
+    if (now - lastSeatPointerMoveRef.current < 32) return; // ~30 Hz throttle
+    lastSeatPointerMoveRef.current = now;
     e.stopPropagation();
     if (e.instanceId !== undefined) {
       const data = tier === 'lower' ? lowerSeatsData : upperSeatsData;
@@ -3167,7 +3172,9 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
         if (stadiumLevel === 'block' && selectedBlockId && seat.blockId !== selectedBlockId) {
           return;
         }
-        setHoveredSeat(seat);
+        if (hoveredSeat?.instanceId !== seat.instanceId) {
+          setHoveredSeat(seat);
+        }
       }
     }
   };
@@ -3407,6 +3414,7 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
           selectedSeats={selectedSeats}
           soldKeys={soldKeys}
           activeSeat={activeSeat}
+          isInteractive={isSeatInteractionActive}
           onPointerMove={handlePointerMoveSeat}
           onPointerOut={handlePointerOutSeat}
           onClick={handleSeatClick}
@@ -3421,6 +3429,7 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
           selectedSeats={selectedSeats}
           soldKeys={soldKeys}
           activeSeat={activeSeat}
+          isInteractive={isSeatInteractionActive}
           onPointerMove={handlePointerMoveSeat}
           onPointerOut={handlePointerOutSeat}
           onClick={handleSeatClick}

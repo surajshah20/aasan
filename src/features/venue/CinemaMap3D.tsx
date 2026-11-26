@@ -804,40 +804,6 @@ const CleanCinematicScreen: React.FC = () => {
       <mesh geometry={curveGeometry}>
         <meshBasicMaterial map={screenTexture} side={THREE.DoubleSide} />
       </mesh>
-
-      {/* Screen Light Wash (Teal & Amber) reaching walls, floor, and front seat tops */}
-      {/* Forward wash onto audience and front rows */}
-      <spotLight
-        position={[0, 4.3, -12.5]}
-        target-position={[0, 1.0, -3.0]}
-        angle={1.15}
-        penumbra={0.75}
-        intensity={4.8}
-        color="#2dd4bf"
-      />
-      <spotLight
-        position={[0, 2.5, -12.0]}
-        target-position={[0, 0.4, -4.0]}
-        angle={1.25}
-        penumbra={0.8}
-        intensity={3.4}
-        color="#d97706"
-      />
-
-      {/* Side wall wash: Strong near screen, fading toward the back */}
-      {/* Left Wall Teal Wash */}
-      <pointLight position={[-10.5, 3.8, -9.0]} intensity={3.5} distance={14} color="#14b8a6" />
-      <pointLight position={[-11.2, 4.0, -3.0]} intensity={1.8} distance={10} color="#0d9488" />
-      <pointLight position={[-11.6, 4.2, 3.0]} intensity={0.8} distance={8} color="#0f766e" />
-
-      {/* Right Wall Amber Wash */}
-      <pointLight position={[10.5, 3.8, -9.0]} intensity={3.2} distance={14} color="#f59e0b" />
-      <pointLight position={[11.2, 4.0, -3.0]} intensity={1.6} distance={10} color="#d97706" />
-      <pointLight position={[11.6, 4.2, 3.0]} intensity={0.8} distance={8} color="#b45309" />
-
-      {/* Floor wash near screen and stage */}
-      <pointLight position={[0, 0.4, -9.0]} intensity={3.8} distance={14} color="#14b8a6" />
-      <pointLight position={[0, 0.2, -11.0]} intensity={2.6} distance={10} color="#f59e0b" />
     </group>
   );
 };
@@ -914,7 +880,7 @@ const ModernMultiplexHall: React.FC<{ carpetTexture: THREE.CanvasTexture; isSeat
             <meshStandardMaterial color="#1a1f2c" roughness={0.6} />
           </mesh>
 
-          {/* Part 5: Amber LED Aisle Step Guide Lights & Micro Downward Glow */}
+          {/* Part 5: Amber LED Aisle Step Guide Lights (Emissive core) */}
           <mesh position={[-8.8, riser.y + 0.02, riser.z]}>
             <boxGeometry args={[0.08, 0.04, 0.16]} />
             <meshBasicMaterial color="#f59e0b" />
@@ -923,12 +889,6 @@ const ModernMultiplexHall: React.FC<{ carpetTexture: THREE.CanvasTexture; isSeat
             <boxGeometry args={[0.08, 0.04, 0.16]} />
             <meshBasicMaterial color="#f59e0b" />
           </mesh>
-          {idx % 2 === 0 && (
-            <>
-              <pointLight position={[-8.8, riser.y + 0.08, riser.z]} intensity={0.4} distance={2.0} color="#f59e0b" />
-              <pointLight position={[8.8, riser.y + 0.08, riser.z]} intensity={0.4} distance={2.0} color="#f59e0b" />
-            </>
-          )}
 
           {/* Row Letter Marker Plate on Wall Risers */}
           <mesh position={[-10.4, riser.y + 0.12, riser.z]}>
@@ -985,7 +945,6 @@ const ModernMultiplexHall: React.FC<{ carpetTexture: THREE.CanvasTexture; isSeat
               <boxGeometry args={[0.05, 0.32, 0.12]} />
               <meshBasicMaterial color="#fef3c7" />
             </mesh>
-            <pointLight position={[0.4, 0, 0]} intensity={1.5} distance={7} color="#ffedd5" />
           </group>
 
           {/* Right Sconce Housing */}
@@ -998,7 +957,6 @@ const ModernMultiplexHall: React.FC<{ carpetTexture: THREE.CanvasTexture; isSeat
               <boxGeometry args={[0.05, 0.32, 0.12]} />
               <meshBasicMaterial color="#fef3c7" />
             </mesh>
-            <pointLight position={[-0.4, 0, 0]} intensity={1.5} distance={7} color="#ffedd5" />
           </group>
         </group>
       ))}
@@ -1012,7 +970,7 @@ const ModernMultiplexHall: React.FC<{ carpetTexture: THREE.CanvasTexture; isSeat
             <meshStandardMaterial color="#07090e" roughness={0.94} />
           </mesh>
 
-          {/* 1. Left Side Wall Cove Lighting (Hidden trough washing down the acoustic wall) */}
+          {/* 1. Left Side Wall Cove Lighting (Hidden trough with warm emissive strip) */}
           <group position={[-12.1, -0.15, 0]}>
             {/* Concealing baffle / pelmet lip so viewer NEVER sees raw glowing strip */}
             <mesh position={[0.25, -0.06, 0]}>
@@ -1024,19 +982,9 @@ const ModernMultiplexHall: React.FC<{ carpetTexture: THREE.CanvasTexture; isSeat
               <boxGeometry args={[0.16, 0.02, 27.5]} />
               <meshBasicMaterial color="#fed7aa" />
             </mesh>
-            {/* Gentle indirect warm wash along top of left wall */}
-            {[-9, -3, 3, 9].map((pz, idx) => (
-              <pointLight
-                key={`left-cove-light-${idx}`}
-                position={[-0.4, -0.25, pz]}
-                intensity={0.95}
-                distance={6.5}
-                color="#fed7aa"
-              />
-            ))}
           </group>
 
-          {/* 2. Right Side Wall Cove Lighting (Hidden trough washing down the acoustic wall) */}
+          {/* 2. Right Side Wall Cove Lighting (Hidden trough with warm emissive strip) */}
           <group position={[12.1, -0.15, 0]}>
             {/* Concealing baffle / pelmet lip */}
             <mesh position={[-0.25, -0.06, 0]}>
@@ -1048,19 +996,9 @@ const ModernMultiplexHall: React.FC<{ carpetTexture: THREE.CanvasTexture; isSeat
               <boxGeometry args={[0.16, 0.02, 27.5]} />
               <meshBasicMaterial color="#fed7aa" />
             </mesh>
-            {/* Gentle indirect warm wash along top of right wall */}
-            {[-9, -3, 3, 9].map((pz, idx) => (
-              <pointLight
-                key={`right-cove-light-${idx}`}
-                position={[0.4, -0.25, pz]}
-                intensity={0.95}
-                distance={6.5}
-                color="#fed7aa"
-              />
-            ))}
           </group>
 
-          {/* 3. Front Cove Lighting above Screen (running along the ceiling above the screen) */}
+          {/* 3. Front Cove Lighting above Screen (Hidden trough with warm emissive strip) */}
           <group position={[0, -0.15, -13.2]}>
             {/* Concealing baffle lip toward viewer */}
             <mesh position={[0, -0.06, 0.25]}>
@@ -1072,16 +1010,6 @@ const ModernMultiplexHall: React.FC<{ carpetTexture: THREE.CanvasTexture; isSeat
               <boxGeometry args={[20.5, 0.02, 0.16]} />
               <meshBasicMaterial color="#fed7aa" />
             </mesh>
-            {/* Soft downward warm proscenium wash */}
-            {[-7, 0, 7].map((px, idx) => (
-              <pointLight
-                key={`front-cove-light-${idx}`}
-                position={[px, -0.3, -0.3]}
-                intensity={0.9}
-                distance={7.0}
-                color="#fed7aa"
-              />
-            ))}
           </group>
 
           {/* 4. 8 Architectural Recessed Downlights in 2 clean rows above the aisles */}
@@ -1099,7 +1027,6 @@ const ModernMultiplexHall: React.FC<{ carpetTexture: THREE.CanvasTexture; isSeat
                   <cylinderGeometry args={[0.11, 0.11, 0.015, 16]} />
                   <meshBasicMaterial color="#fef3c7" />
                 </mesh>
-                <pointLight position={[0, -0.15, 0]} intensity={0.65} distance={7.5} color="#fef3c7" />
               </group>
 
               {/* Right Aisle Downlight */}
@@ -1114,7 +1041,6 @@ const ModernMultiplexHall: React.FC<{ carpetTexture: THREE.CanvasTexture; isSeat
                   <cylinderGeometry args={[0.11, 0.11, 0.015, 16]} />
                   <meshBasicMaterial color="#fef3c7" />
                 </mesh>
-                <pointLight position={[0, -0.15, 0]} intensity={0.65} distance={7.5} color="#fef3c7" />
               </group>
             </group>
           ))}

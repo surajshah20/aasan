@@ -4,7 +4,14 @@
 
 # Aasan (आसन) — Immersive Ticketing & Seat-View Platform for Nepal
 
+<p align="center">
+  <a href="https://aasan.vercel.app/" target="_blank"><img src="https://img.shields.io/badge/Live%20Demo-aasan.vercel.app-dc143c?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" /></a>
+  <a href="https://github.com/surajshah20/aasan"><img src="https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub" /></a>
+</p>
+
 > **आसन • Aasan**: "Seat" in Nepali. Nepal's premier 3D seat-selection and digital ticketing platform featuring true eye-level perspective previews for stadiums and cinema halls.
+> 
+> 🌐 **Live Website**: [https://aasan.vercel.app/](https://aasan.vercel.app/)
 
 ---
 

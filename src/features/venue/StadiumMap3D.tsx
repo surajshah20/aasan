@@ -1914,403 +1914,312 @@ const SingleFloodlightTower: React.FC<{
   lampFaceTexture,
   lampDayFaceTexture,
 }) => {
-  const starFlareRef = useRef<THREE.Mesh>(null);
-  const spotLightRef = useRef<THREE.SpotLight>(null);
-  const spotTargetRef = useRef<THREE.Object3D>(null);
+    const starFlareRef = useRef<THREE.Mesh>(null);
+    const spotLightRef = useRef<THREE.SpotLight>(null);
+    const spotTargetRef = useRef<THREE.Object3D>(null);
 
-  // Exact head world coordinates: top of mast at [tx, 47.2, tz]
-  const headWorldPos = useMemo(() => {
-    return new THREE.Vector3(tower.pos[0], 47.2, tower.pos[2]);
-  }, [tower]);
+    // Exact head world coordinates: top of mast at [tx, 47.2, tz]
+    const headWorldPos = useMemo(() => {
+      return new THREE.Vector3(tower.pos[0], 47.2, tower.pos[2]);
+    }, [tower]);
 
-  // Compute direction, distance, lookAt quaternion, and angle below horizontal
-  const { headQuaternion, beamLength, angleDeg } = useMemo(() => {
-    const localTgt = new THREE.Vector3(
-      tower.target[0] - tower.pos[0],
-      -46.2,
-      tower.target[2] - tower.pos[2]
-    );
-    const len = localTgt.length();
-    const D = Math.hypot(localTgt.x, localTgt.z);
-    const ang = (Math.atan2(46.2, D) * 180) / Math.PI;
-
-    const dummy = new THREE.Object3D();
-    dummy.lookAt(localTgt);
-
-    return {
-      headQuaternion: dummy.quaternion.clone(),
-      beamLength: len,
-      angleDeg: ang,
-    };
-  }, [tower]);
-
-  // Connect SpotLight to its dedicated target child object
-  useLayoutEffect(() => {
-    if (spotLightRef.current && spotTargetRef.current) {
-      spotLightRef.current.target = spotTargetRef.current;
-    }
-  }, [beamLength]);
-
-  // Angle check & logging (Angles must be strictly 20° to 40° below horizontal)
-  useEffect(() => {
-    const isValid = angleDeg >= 20 && angleDeg <= 40;
-    console.log(
-      `[Floodlight Orientation Check] Tower: ${tower.id} | Head World: [${headWorldPos.x.toFixed(1)}, 47.2, ${headWorldPos.z.toFixed(1)}] | Pitch Target: [${tower.target.join(', ')}] | Angle below horizontal: ${angleDeg.toFixed(1)}° (${isValid ? 'PASS: 20°-40°' : 'FAIL: OUT OF RANGE'})`
-    );
-    if (typeof window !== 'undefined') {
-      if (!(window as any).__FLOODLIGHT_ANGLES__) (window as any).__FLOODLIGHT_ANGLES__ = {};
-      (window as any).__FLOODLIGHT_ANGLES__[tower.id] = {
-        id: tower.id,
-        head: [headWorldPos.x, 47.2, headWorldPos.z],
-        target: tower.target,
-        distance: Number(beamLength.toFixed(1)),
-        angleDeg: Number(angleDeg.toFixed(1)),
-        valid: isValid,
-      };
-    }
-  }, [tower, headWorldPos, angleDeg, beamLength]);
-
-  // Star flare scales smoothly with camera distance, spotLight smoothly dims on transition
-  useFrame(({ camera }, delta) => {
-    const camPos = camera.position;
-    const distToHead = camPos.distanceTo(headWorldPos);
-
-    if (starFlareRef.current) {
-      if (!isEvening) {
-        starFlareRef.current.visible = false;
-      } else {
-        starFlareRef.current.visible = true;
-        // Soft optical star glare that scales naturally with distance
-        const scaleVal = Math.min(1.7, Math.max(0.65, distToHead * 0.009));
-        starFlareRef.current.scale.set(scaleVal, scaleVal, 1);
-      }
-    }
-
-    if (spotLightRef.current) {
-      const targetIntensity = isEvening ? 135 : 0;
-      spotLightRef.current.intensity = THREE.MathUtils.damp(
-        spotLightRef.current.intensity,
-        targetIntensity,
-        3.2,
-        delta
+    // Compute direction, distance, lookAt quaternion, and angle below horizontal
+    const { headQuaternion, beamLength, angleDeg } = useMemo(() => {
+      const localTgt = new THREE.Vector3(
+        tower.target[0] - tower.pos[0],
+        -46.2,
+        tower.target[2] - tower.pos[2]
       );
-    }
-  });
+      const len = localTgt.length();
+      const D = Math.hypot(localTgt.x, localTgt.z);
+      const ang = (Math.atan2(46.2, D) * 180) / Math.PI;
 
-  // Compute outward yaw angle (away from stadium center) for ladder & base cabinet orientation
-  const outwardAngle = useMemo(() => {
-    return Math.atan2(tower.pos[2], tower.pos[0]);
-  }, [tower.pos]);
+      const dummy = new THREE.Object3D();
+      dummy.lookAt(localTgt);
 
-  return (
-    <group position={tower.pos}>
-      {/* 1. Heavy Concrete Foundation Footing - on ground */}
-      <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[2.8, 3.2, 1.8, 16]} />
-        <meshStandardMaterial color={isEvening ? "#334155" : "#78828e"} roughness={0.8} />
-      </mesh>
+      return {
+        headQuaternion: dummy.quaternion.clone(),
+        beamLength: len,
+        angleDeg: ang,
+      };
+    }, [tower]);
 
-      {/* Base Steel Flange Plate & Anchor Bolts */}
-      <mesh position={[0, 1.88, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[2.25, 2.35, 0.16, 16]} />
-        <meshStandardMaterial
-          color={isEvening ? "#475569" : "#9ea5ad"}
-          metalness={isEvening ? 0.85 : 0.50}
-          roughness={isEvening ? 0.30 : 0.45}
-        />
-      </mesh>
-      {/* Radial Anchor Bolt Studs with Hex Nuts */}
-      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((bi) => {
-        const theta = (bi * Math.PI) / 6;
-        const bx = Math.cos(theta) * 2.05;
-        const bz = Math.sin(theta) * 2.05;
-        return (
-          <mesh key={`anchor-bolt-${bi}`} position={[bx, 2.02, bz]}>
-            <cylinderGeometry args={[0.065, 0.065, 0.16, 6]} />
+    // Connect SpotLight to its dedicated target child object
+    useLayoutEffect(() => {
+      if (spotLightRef.current && spotTargetRef.current) {
+        spotLightRef.current.target = spotTargetRef.current;
+      }
+    }, [beamLength]);
+
+    // Angle check & logging (Angles must be strictly 20° to 40° below horizontal)
+    useEffect(() => {
+      const isValid = angleDeg >= 20 && angleDeg <= 40;
+      console.log(
+        `[Floodlight Orientation Check] Tower: ${tower.id} | Head World: [${headWorldPos.x.toFixed(1)}, 47.2, ${headWorldPos.z.toFixed(1)}] | Pitch Target: [${tower.target.join(', ')}] | Angle below horizontal: ${angleDeg.toFixed(1)}° (${isValid ? 'PASS: 20°-40°' : 'FAIL: OUT OF RANGE'})`
+      );
+      if (typeof window !== 'undefined') {
+        if (!(window as any).__FLOODLIGHT_ANGLES__) (window as any).__FLOODLIGHT_ANGLES__ = {};
+        (window as any).__FLOODLIGHT_ANGLES__[tower.id] = {
+          id: tower.id,
+          head: [headWorldPos.x, 47.2, headWorldPos.z],
+          target: tower.target,
+          distance: Number(beamLength.toFixed(1)),
+          angleDeg: Number(angleDeg.toFixed(1)),
+          valid: isValid,
+        };
+      }
+    }, [tower, headWorldPos, angleDeg, beamLength]);
+
+    // Star flare scales smoothly with camera distance, spotLight smoothly dims on transition
+    useFrame(({ camera }, delta) => {
+      const camPos = camera.position;
+      const distToHead = camPos.distanceTo(headWorldPos);
+
+      if (starFlareRef.current) {
+        if (!isEvening) {
+          starFlareRef.current.visible = false;
+        } else {
+          starFlareRef.current.visible = true;
+          // Soft optical star glare that scales naturally with distance
+          const scaleVal = Math.min(1.7, Math.max(0.65, distToHead * 0.009));
+          starFlareRef.current.scale.set(scaleVal, scaleVal, 1);
+        }
+      }
+
+      if (spotLightRef.current) {
+        const targetIntensity = isEvening ? 135 : 0;
+        spotLightRef.current.intensity = THREE.MathUtils.damp(
+          spotLightRef.current.intensity,
+          targetIntensity,
+          3.2,
+          delta
+        );
+      }
+    });
+
+    // Compute outward yaw angle (away from stadium center) for ladder & base cabinet orientation
+    const outwardAngle = useMemo(() => {
+      return Math.atan2(tower.pos[2], tower.pos[0]);
+    }, [tower.pos]);
+
+    return (
+      <group position={tower.pos}>
+        {/* 1. Heavy Concrete Foundation Footing - on ground */}
+        <mesh position={[0, 0.9, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[2.8, 3.2, 1.8, 16]} />
+          <meshStandardMaterial color={isEvening ? "#334155" : "#78828e"} roughness={0.8} />
+        </mesh>
+
+        {/* Base Steel Flange Plate & Anchor Bolts */}
+        <mesh position={[0, 1.88, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[2.25, 2.35, 0.16, 16]} />
+          <meshStandardMaterial
+            color={isEvening ? "#475569" : "#9ea5ad"}
+            metalness={isEvening ? 0.85 : 0.50}
+            roughness={isEvening ? 0.30 : 0.45}
+          />
+        </mesh>
+        {/* Radial Anchor Bolt Studs with Hex Nuts */}
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((bi) => {
+          const theta = (bi * Math.PI) / 6;
+          const bx = Math.cos(theta) * 2.05;
+          const bz = Math.sin(theta) * 2.05;
+          return (
+            <mesh key={`anchor-bolt-${bi}`} position={[bx, 2.02, bz]}>
+              <cylinderGeometry args={[0.065, 0.065, 0.16, 6]} />
+              <meshStandardMaterial
+                color={isEvening ? "#334155" : "#7c858e"}
+                metalness={0.7}
+                roughness={0.4}
+              />
+            </mesh>
+          );
+        })}
+
+        {/* 2. Main Galvanized Tapered Steel Mast Pole (1.75m at base -> 0.65m at top) */}
+        <mesh position={[0, 23.48, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.65, 1.75, 43.04, 20]} />
+          <meshStandardMaterial
+            color={isEvening ? "#475569" : "#9ea5ad"}
+            metalness={isEvening ? 0.85 : 0.50}
+            roughness={isEvening ? 0.30 : 0.45}
+          />
+        </mesh>
+
+        {/* 4 Horizontal Splice Joint Bands (Flange Rings) */}
+        {[
+          { y: 12.5, r: 1.56, h: 0.28 },
+          { y: 23.0, r: 1.29, h: 0.26 },
+          { y: 33.5, r: 1.02, h: 0.24 },
+          { y: 42.0, r: 0.80, h: 0.22 },
+        ].map((splice, idx) => (
+          <mesh key={`splice-${idx}`} position={[0, splice.y, 0]}>
+            <cylinderGeometry args={[splice.r, splice.r, splice.h, 20]} />
             <meshStandardMaterial
-              color={isEvening ? "#334155" : "#7c858e"}
-              metalness={0.7}
+              color={isEvening ? "#3e4c5e" : "#8d949c"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
+          </mesh>
+        ))}
+
+        {/* 3. Mid-Mast Maintenance Platform (~2/3 height at y=29.5m) */}
+        <group position={[0, 29.5, 0]}>
+          {/* Support gusset brackets underneath */}
+          {[0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].map((rot, idx) => (
+            <mesh
+              key={`plat-gusset-${idx}`}
+              position={[Math.cos(rot) * 1.45, -0.4, Math.sin(rot) * 1.45]}
+              rotation={[0, -rot, 0.45]}
+            >
+              <boxGeometry args={[0.08, 0.9, 0.22]} />
+              <meshStandardMaterial
+                color={isEvening ? "#334155" : "#8a9198"}
+                metalness={isEvening ? 0.85 : 0.50}
+                roughness={isEvening ? 0.30 : 0.45}
+              />
+            </mesh>
+          ))}
+          {/* Platform floor disc */}
+          <mesh position={[0, 0, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[2.1, 2.1, 0.12, 16]} />
+            <meshStandardMaterial
+              color={isEvening ? "#2a374a" : "#9ea5ad"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
+          </mesh>
+          {/* Safety Railing Handrails */}
+          <mesh position={[0, 1.0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[2.08, 0.035, 8, 24]} />
+            <meshStandardMaterial
+              color={isEvening ? "#475569" : "#a6aeb6"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
+          </mesh>
+          <mesh position={[0, 0.52, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[2.08, 0.025, 8, 24]} />
+            <meshStandardMaterial
+              color={isEvening ? "#475569" : "#a6aeb6"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
+          </mesh>
+          {/* Railing Vertical Stanchions */}
+          {[0, 1, 2, 3, 4, 5, 6, 7].map((si) => {
+            const sRad = (si * Math.PI) / 4;
+            return (
+              <mesh
+                key={`stanchion-${si}`}
+                position={[Math.cos(sRad) * 2.06, 0.5, Math.sin(sRad) * 2.06]}
+              >
+                <cylinderGeometry args={[0.025, 0.025, 1.0, 6]} />
+                <meshStandardMaterial
+                  color={isEvening ? "#475569" : "#a6aeb6"}
+                  metalness={isEvening ? 0.85 : 0.50}
+                  roughness={isEvening ? 0.30 : 0.45}
+                />
+              </mesh>
+            );
+          })}
+        </group>
+
+        {/* 4. Rear Thin Access Ladder & Cable Conduit Run down the back of the mast */}
+        <group rotation={[0, -outwardAngle, 0]}>
+          {/* Vertical ladder stringer rails (slanted with mast taper: bottom r=1.92m, top r=0.82m) */}
+          {[-0.22, 0.22].map((railZ, ridx) => {
+            // Average position and slant angle for 43m run
+            const dx = 0.82 - 1.92;
+            const dy = 43.0;
+            const slantAngle = Math.atan2(dx, dy);
+            return (
+              <mesh
+                key={`ladder-rail-${ridx}`}
+                position={[1.37, 23.5, railZ]}
+                rotation={[0, 0, -slantAngle]}
+              >
+                <boxGeometry args={[0.045, 43.0, 0.045]} />
+                <meshStandardMaterial
+                  color={isEvening ? "#475569" : "#9aa2aa"}
+                  metalness={isEvening ? 0.85 : 0.50}
+                  roughness={isEvening ? 0.30 : 0.45}
+                />
+              </mesh>
+            );
+          })}
+
+          {/* Stand-off mounting brackets connecting ladder to mast every 4m */}
+          {[4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44].map((by) => {
+            const t = (by - 2.0) / 43.0;
+            const rMast = 1.75 - t * (1.75 - 0.65);
+            const rLad = 1.92 - t * (1.92 - 0.82);
+            const wBracket = rLad - rMast;
+            return (
+              <mesh key={`bracket-${by}`} position={[rMast + wBracket / 2, by, 0]}>
+                <boxGeometry args={[wBracket, 0.04, 0.48]} />
+                <meshStandardMaterial
+                  color={isEvening ? "#3e4c5e" : "#8d949c"}
+                  metalness={isEvening ? 0.85 : 0.50}
+                  roughness={isEvening ? 0.30 : 0.45}
+                />
+              </mesh>
+            );
+          })}
+
+          {/* Cable Tray Conduit Run running down the mast */}
+          <mesh position={[1.42, 23.5, 0.38]} rotation={[0, 0, Math.atan2(1.1, 43.0)]}>
+            <boxGeometry args={[0.08, 43.0, 0.06]} />
+            <meshStandardMaterial
+              color={isEvening ? "#334155" : "#7c848e"}
+              metalness={0.6}
               roughness={0.4}
             />
           </mesh>
-        );
-      })}
 
-      {/* 2. Main Galvanized Tapered Steel Mast Pole (1.75m at base -> 0.65m at top) */}
-      <mesh position={[0, 23.48, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.65, 1.75, 43.04, 20]} />
-        <meshStandardMaterial
-          color={isEvening ? "#475569" : "#9ea5ad"}
-          metalness={isEvening ? 0.85 : 0.50}
-          roughness={isEvening ? 0.30 : 0.45}
-        />
-      </mesh>
-
-      {/* 4 Horizontal Splice Joint Bands (Flange Rings) */}
-      {[
-        { y: 12.5, r: 1.56, h: 0.28 },
-        { y: 23.0, r: 1.29, h: 0.26 },
-        { y: 33.5, r: 1.02, h: 0.24 },
-        { y: 42.0, r: 0.80, h: 0.22 },
-      ].map((splice, idx) => (
-        <mesh key={`splice-${idx}`} position={[0, splice.y, 0]}>
-          <cylinderGeometry args={[splice.r, splice.r, splice.h, 20]} />
-          <meshStandardMaterial
-            color={isEvening ? "#3e4c5e" : "#8d949c"}
-            metalness={isEvening ? 0.85 : 0.50}
-            roughness={isEvening ? 0.30 : 0.45}
-          />
-        </mesh>
-      ))}
-
-      {/* 3. Mid-Mast Maintenance Platform (~2/3 height at y=29.5m) */}
-      <group position={[0, 29.5, 0]}>
-        {/* Support gusset brackets underneath */}
-        {[0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].map((rot, idx) => (
-          <mesh
-            key={`plat-gusset-${idx}`}
-            position={[Math.cos(rot) * 1.45, -0.4, Math.sin(rot) * 1.45]}
-            rotation={[0, -rot, 0.45]}
-          >
-            <boxGeometry args={[0.08, 0.9, 0.22]} />
-            <meshStandardMaterial
-              color={isEvening ? "#334155" : "#8a9198"}
-              metalness={isEvening ? 0.85 : 0.50}
-              roughness={isEvening ? 0.30 : 0.45}
-            />
-          </mesh>
-        ))}
-        {/* Platform floor disc */}
-        <mesh position={[0, 0, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[2.1, 2.1, 0.12, 16]} />
-          <meshStandardMaterial
-            color={isEvening ? "#2a374a" : "#9ea5ad"}
-            metalness={isEvening ? 0.85 : 0.50}
-            roughness={isEvening ? 0.30 : 0.45}
-          />
-        </mesh>
-        {/* Safety Railing Handrails */}
-        <mesh position={[0, 1.0, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[2.08, 0.035, 8, 24]} />
-          <meshStandardMaterial
-            color={isEvening ? "#475569" : "#a6aeb6"}
-            metalness={isEvening ? 0.85 : 0.50}
-            roughness={isEvening ? 0.30 : 0.45}
-          />
-        </mesh>
-        <mesh position={[0, 0.52, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[2.08, 0.025, 8, 24]} />
-          <meshStandardMaterial
-            color={isEvening ? "#475569" : "#a6aeb6"}
-            metalness={isEvening ? 0.85 : 0.50}
-            roughness={isEvening ? 0.30 : 0.45}
-          />
-        </mesh>
-        {/* Railing Vertical Stanchions */}
-        {[0, 1, 2, 3, 4, 5, 6, 7].map((si) => {
-          const sRad = (si * Math.PI) / 4;
-          return (
-            <mesh
-              key={`stanchion-${si}`}
-              position={[Math.cos(sRad) * 2.06, 0.5, Math.sin(sRad) * 2.06]}
-            >
-              <cylinderGeometry args={[0.025, 0.025, 1.0, 6]} />
+          {/* Weatherproof Base Equipment / Junction Cabinet at Base Footing */}
+          <group position={[1.95, 2.45, 0.85]}>
+            {/* Cabinet mount pad */}
+            <mesh position={[0, -0.65, 0]}>
+              <boxGeometry args={[1.2, 0.12, 0.75]} />
+              <meshStandardMaterial color={isEvening ? "#334155" : "#78828e"} roughness={0.8} />
+            </mesh>
+            {/* Steel enclosure cabinet */}
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[1.1, 1.45, 0.65]} />
               <meshStandardMaterial
-                color={isEvening ? "#475569" : "#a6aeb6"}
+                color={isEvening ? "#334155" : "#8a9198"}
                 metalness={isEvening ? 0.85 : 0.50}
                 roughness={isEvening ? 0.30 : 0.45}
               />
             </mesh>
-          );
-        })}
-      </group>
-
-      {/* 4. Rear Thin Access Ladder & Cable Conduit Run down the back of the mast */}
-      <group rotation={[0, -outwardAngle, 0]}>
-        {/* Vertical ladder stringer rails (slanted with mast taper: bottom r=1.92m, top r=0.82m) */}
-        {[-0.22, 0.22].map((railZ, ridx) => {
-          // Average position and slant angle for 43m run
-          const dx = 0.82 - 1.92;
-          const dy = 43.0;
-          const slantAngle = Math.atan2(dx, dy);
-          return (
-            <mesh
-              key={`ladder-rail-${ridx}`}
-              position={[1.37, 23.5, railZ]}
-              rotation={[0, 0, -slantAngle]}
-            >
-              <boxGeometry args={[0.045, 43.0, 0.045]} />
-              <meshStandardMaterial
-                color={isEvening ? "#475569" : "#9aa2aa"}
-                metalness={isEvening ? 0.85 : 0.50}
-                roughness={isEvening ? 0.30 : 0.45}
-              />
+            {/* Cabinet door recessed seam */}
+            <mesh position={[0.56, 0, 0]}>
+              <planeGeometry args={[0.55, 1.35]} />
+              <meshStandardMaterial color={isEvening ? "#1e293b" : "#767d84"} roughness={0.5} />
             </mesh>
-          );
-        })}
-
-        {/* Stand-off mounting brackets connecting ladder to mast every 4m */}
-        {[4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44].map((by) => {
-          const t = (by - 2.0) / 43.0;
-          const rMast = 1.75 - t * (1.75 - 0.65);
-          const rLad = 1.92 - t * (1.92 - 0.82);
-          const wBracket = rLad - rMast;
-          return (
-            <mesh key={`bracket-${by}`} position={[rMast + wBracket / 2, by, 0]}>
-              <boxGeometry args={[wBracket, 0.04, 0.48]} />
-              <meshStandardMaterial
-                color={isEvening ? "#3e4c5e" : "#8d949c"}
-                metalness={isEvening ? 0.85 : 0.50}
-                roughness={isEvening ? 0.30 : 0.45}
-              />
-            </mesh>
-          );
-        })}
-
-        {/* Cable Tray Conduit Run running down the mast */}
-        <mesh position={[1.42, 23.5, 0.38]} rotation={[0, 0, Math.atan2(1.1, 43.0)]}>
-          <boxGeometry args={[0.08, 43.0, 0.06]} />
-          <meshStandardMaterial
-            color={isEvening ? "#334155" : "#7c848e"}
-            metalness={0.6}
-            roughness={0.4}
-          />
-        </mesh>
-
-        {/* Weatherproof Base Equipment / Junction Cabinet at Base Footing */}
-        <group position={[1.95, 2.45, 0.85]}>
-          {/* Cabinet mount pad */}
-          <mesh position={[0, -0.65, 0]}>
-            <boxGeometry args={[1.2, 0.12, 0.75]} />
-            <meshStandardMaterial color={isEvening ? "#334155" : "#78828e"} roughness={0.8} />
-          </mesh>
-          {/* Steel enclosure cabinet */}
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[1.1, 1.45, 0.65]} />
-            <meshStandardMaterial
-              color={isEvening ? "#334155" : "#8a9198"}
-              metalness={isEvening ? 0.85 : 0.50}
-              roughness={isEvening ? 0.30 : 0.45}
-            />
-          </mesh>
-          {/* Cabinet door recessed seam */}
-          <mesh position={[0.56, 0, 0]}>
-            <planeGeometry args={[0.55, 1.35]} />
-            <meshStandardMaterial color={isEvening ? "#1e293b" : "#767d84"} roughness={0.5} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* 5. Mast Top Platform Collar & Maintenance Railing */}
-      <mesh position={[0, 45.2, 0]}>
-        <cylinderGeometry args={[1.05, 0.72, 0.5, 16]} />
-        <meshStandardMaterial
-          color={isEvening ? "#334155" : "#9ea5ad"}
-          metalness={isEvening ? 0.85 : 0.50}
-          roughness={isEvening ? 0.30 : 0.45}
-        />
-      </mesh>
-      <mesh position={[0, 45.5, 0]}>
-        <cylinderGeometry args={[1.5, 1.5, 0.15, 16]} />
-        <meshStandardMaterial
-          color={isEvening ? "#1e293b" : "#8e969e"}
-          metalness={isEvening ? 0.85 : 0.50}
-          roughness={isEvening ? 0.30 : 0.45}
-        />
-      </mesh>
-      <mesh position={[0, 46.0, 0]}>
-        <cylinderGeometry args={[1.45, 1.45, 0.9, 16, 1, true]} />
-        <meshStandardMaterial
-          color={isEvening ? "#475569" : "#a6aeb6"}
-          metalness={isEvening ? 0.85 : 0.50}
-          roughness={isEvening ? 0.30 : 0.45}
-          wireframe
-        />
-      </mesh>
-
-      {/* 6. Swivel Mounting Yoke & Forward Cantilevered Floodlight Head Unit at [0, 46.2, 0] */}
-      <group position={[0, 46.2, 0]} quaternion={headQuaternion}>
-        {/* Cantilever Bracket / Yoke (Galvanized / Mid-Grey in Day) */}
-        <group>
-          <mesh position={[0, -0.3, 0]}>
-            <cylinderGeometry args={[0.65, 0.65, 0.8, 12]} />
-            <meshStandardMaterial
-              color={isEvening ? "#334155" : "#9ea5ad"}
-              metalness={isEvening ? 0.85 : 0.50}
-              roughness={isEvening ? 0.30 : 0.45}
-            />
-          </mesh>
-          <mesh position={[-1.6, 0.5, 0.9]} rotation={[0.48, -0.12, 0]}>
-            <boxGeometry args={[0.3, 0.35, 2.2]} />
-            <meshStandardMaterial
-              color={isEvening ? "#1e293b" : "#9ea5ad"}
-              metalness={isEvening ? 0.85 : 0.50}
-              roughness={isEvening ? 0.30 : 0.45}
-            />
-          </mesh>
-          <mesh position={[1.6, 0.5, 0.9]} rotation={[0.48, 0.12, 0]}>
-            <boxGeometry args={[0.3, 0.35, 2.2]} />
-            <meshStandardMaterial
-              color={isEvening ? "#1e293b" : "#9ea5ad"}
-              metalness={isEvening ? 0.85 : 0.50}
-              roughness={isEvening ? 0.30 : 0.45}
-            />
-          </mesh>
-          <mesh position={[0, 1.0, 1.75]}>
-            <boxGeometry args={[5.2, 0.4, 0.4]} />
-            <meshStandardMaterial
-              color={isEvening ? "#1e293b" : "#9ea5ad"}
-              metalness={isEvening ? 0.85 : 0.50}
-              roughness={isEvening ? 0.30 : 0.45}
-            />
-          </mesh>
+          </group>
         </group>
 
-        {/* ─── HEAD ASSEMBLY (Forward-offset at z=2.1m, y=1.0m, facing pitch along +Z) ─── */}
-
-        {/* Mid-Grey Metal Housing Frame (Lighter than mast) */}
-        <mesh position={[0, 1.0, 2.1]} castShadow>
-          <boxGeometry args={[9.6, 5.6, 0.6]} />
-          <meshStandardMaterial
-            color={isEvening ? "#0b0f19" : "#b0b8c0"}
-            metalness={isEvening ? 0.85 : 0.52}
-            roughness={isEvening ? 0.30 : 0.42}
-          />
-        </mesh>
-
-        {/* Slim Anti-Glare Visor on Top */}
-        <mesh position={[0, 3.82, 2.55]} rotation={[0.22, 0, 0]}>
-          <boxGeometry args={[9.8, 0.12, 0.45]} />
-          <meshStandardMaterial
-            color={isEvening ? "#080c14" : "#8e969e"}
-            metalness={isEvening ? 0.70 : 0.50}
-            roughness={isEvening ? 0.40 : 0.45}
-          />
-        </mesh>
-
-        {/* Side Visor Flaps */}
-        {[-4.85, 4.85].map((sx, idx) => (
-          <mesh key={`side-visor-${idx}`} position={[sx, 1.0, 2.45]}>
-            <boxGeometry args={[0.12, 5.6, 0.35]} />
-            <meshStandardMaterial
-              color={isEvening ? "#080c14" : "#8e969e"}
-              metalness={isEvening ? 0.70 : 0.50}
-              roughness={isEvening ? 0.40 : 0.45}
-            />
-          </mesh>
-        ))}
-
-        {/* Rear Maintenance Catwalk & Safety Lattice */}
-        <mesh position={[0, -1.4, 1.3]}>
-          <boxGeometry args={[8.8, 0.2, 1.0]} />
+        {/* 5. Mast Top Platform Collar & Maintenance Railing */}
+        <mesh position={[0, 45.2, 0]}>
+          <cylinderGeometry args={[1.05, 0.72, 0.5, 16]} />
           <meshStandardMaterial
             color={isEvening ? "#334155" : "#9ea5ad"}
             metalness={isEvening ? 0.85 : 0.50}
             roughness={isEvening ? 0.30 : 0.45}
           />
         </mesh>
-        <mesh position={[0, -0.8, 0.8]}>
-          <boxGeometry args={[8.8, 1.0, 0.08]} />
+        <mesh position={[0, 45.5, 0]}>
+          <cylinderGeometry args={[1.5, 1.5, 0.15, 16]} />
+          <meshStandardMaterial
+            color={isEvening ? "#1e293b" : "#8e969e"}
+            metalness={isEvening ? 0.85 : 0.50}
+            roughness={isEvening ? 0.30 : 0.45}
+          />
+        </mesh>
+        <mesh position={[0, 46.0, 0]}>
+          <cylinderGeometry args={[1.45, 1.45, 0.9, 16, 1, true]} />
           <meshStandardMaterial
             color={isEvening ? "#475569" : "#a6aeb6"}
             metalness={isEvening ? 0.85 : 0.50}
@@ -2319,117 +2228,208 @@ const SingleFloodlightTower: React.FC<{
           />
         </mesh>
 
-        {/* Dark Reflector Panel Face Behind Lenses with visible 10x6 precision grid */}
-        <mesh position={[0, 1.0, 2.41]}>
-          <planeGeometry args={[9.2, 5.2]} />
-          <meshStandardMaterial
-            color={isEvening ? "#ffffff" : "#ffffff"}
-            map={isEvening ? lampFaceTexture : lampDayFaceTexture}
-            emissive={isEvening ? "#fffde8" : "#000000"}
-            emissiveMap={isEvening ? lampFaceTexture : undefined}
-            emissiveIntensity={isEvening ? 1.5 : 0.0}
-            roughness={isEvening ? 0.25 : 0.45}
-            metalness={isEvening ? 0.70 : 0.55}
-          />
-        </mesh>
-
-        {/* 60 Micro-Lenses: Paler glass with faint sky reflection & visible grid frame, strictly no glow in Day Mode */}
-        {[-4.05, -3.15, -2.25, -1.35, -0.45, 0.45, 1.35, 2.25, 3.15, 4.05].map((bx, bi) =>
-          [-2.0, -1.2, -0.4, 0.4, 1.2, 2.0].map((by, ri) => (
-            <group key={`bulb-grp-${bi}-${ri}`} position={[bx, 1.0 + by, 2.43]}>
-              {/* Outer lens bezel collar ring for crisp visible grid definition */}
-              {!isEvening && (
-                <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.01]}>
-                  <cylinderGeometry args={[0.35, 0.38, 0.04, 12]} />
-                  <meshStandardMaterial color="#2d3748" metalness={0.65} roughness={0.35} />
-                </mesh>
-              )}
-              {/* Lens face: paler glass with faint sky reflection, zero emissive in day */}
-              <mesh rotation={[Math.PI / 2, 0, 0]}>
-                <cylinderGeometry args={[0.31, 0.35, 0.07, 12]} />
-                <meshStandardMaterial
-                  color={isEvening ? "#ffffff" : "#f2f7fa"}
-                  emissive={isEvening ? "#ffffff" : "#000000"}
-                  emissiveIntensity={isEvening ? 3.2 : 0.0}
-                  roughness={isEvening ? 0.08 : 0.12}
-                  metalness={isEvening ? 0.20 : 0.52}
-                />
-              </mesh>
-            </group>
-          ))
-        )}
-
-        {/* Optical Star Glare Sprite centered on lamp head (scales with camera distance, no big flat halo) */}
-        {isEvening && (
-          <mesh ref={starFlareRef} position={[0, 1.0, 2.50]}>
-            <planeGeometry args={[2.8, 2.8]} />
-            <meshBasicMaterial
-              map={starFlareTexture}
-              color="#fffdf0"
-              transparent
-              opacity={0.25}
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-              depthTest={true}
-            />
-          </mesh>
-        )}
-
-        {/* Faint localized head haze (3 to 5% opacity, fading out within 2.5 meters) */}
-        {isEvening && (
-          <mesh position={[0, 1.0, 2.49]}>
-            <planeGeometry args={[5.2, 3.2]} />
-            <meshBasicMaterial
-              map={headHazeTexture}
-              color="#fffdf2"
-              transparent
-              opacity={0.03}
-              blending={THREE.AdditiveBlending}
-              depthWrite={false}
-              depthTest={true}
-            />
-          </mesh>
-        )}
-
-        {/* Dedicated target object for SpotLight at exact pitch target distance */}
-        <object3D ref={spotTargetRef} position={[0, 1.0, beamLength]} />
-
-        {/* High-CRI Floodlight: wide angle (~1.08 rad), soft penumbra, even illumination across pitch */}
-        <spotLight
-          ref={spotLightRef}
-          position={[0, 1.0, 2.48]}
-          intensity={isEvening ? 135 : 0}
-          color="#fffdf0"
-          angle={1.08}
-          penumbra={0.92}
-          distance={180}
-          decay={1.0}
-          castShadow={!isLiteMode && isEvening && (tower.id.includes('nw') || tower.id.includes('se') || tower.id.includes('west'))}
-          shadow-mapSize={[1024, 1024]}
-          shadow-bias={-0.0003}
-        />
-
-        {/* NOTE: Solid light cone geometry has been deleted; in clear air, beams are invisible */}
-
-        {/* Debug Axis Line and Target Disc on Pitch (enabled via ?debug=1 or toggle button) */}
-        {showBeamAxes && (
+        {/* 6. Swivel Mounting Yoke & Forward Cantilevered Floodlight Head Unit at [0, 46.2, 0] */}
+        <group position={[0, 46.2, 0]} quaternion={headQuaternion}>
+          {/* Cantilever Bracket / Yoke (Galvanized / Mid-Grey in Day) */}
           <group>
-            {/* Axis cylinder from front face z=2.48m to pitch target */}
-            <mesh position={[0, 1.0, (beamLength + 2.48) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[0.10, 0.10, beamLength - 2.48, 8]} />
-              <meshBasicMaterial color="#38bdf8" />
+            <mesh position={[0, -0.3, 0]}>
+              <cylinderGeometry args={[0.65, 0.65, 0.8, 12]} />
+              <meshStandardMaterial
+                color={isEvening ? "#334155" : "#9ea5ad"}
+                metalness={isEvening ? 0.85 : 0.50}
+                roughness={isEvening ? 0.30 : 0.45}
+              />
             </mesh>
-            {/* Target disc on pitch */}
-            <mesh position={[0, 1.0, beamLength]}>
-              <ringGeometry args={[0.8, 1.4, 24]} />
-              <meshBasicMaterial color="#38bdf8" side={THREE.DoubleSide} />
+            <mesh position={[-1.6, 0.5, 0.9]} rotation={[0.48, -0.12, 0]}>
+              <boxGeometry args={[0.3, 0.35, 2.2]} />
+              <meshStandardMaterial
+                color={isEvening ? "#1e293b" : "#9ea5ad"}
+                metalness={isEvening ? 0.85 : 0.50}
+                roughness={isEvening ? 0.30 : 0.45}
+              />
+            </mesh>
+            <mesh position={[1.6, 0.5, 0.9]} rotation={[0.48, 0.12, 0]}>
+              <boxGeometry args={[0.3, 0.35, 2.2]} />
+              <meshStandardMaterial
+                color={isEvening ? "#1e293b" : "#9ea5ad"}
+                metalness={isEvening ? 0.85 : 0.50}
+                roughness={isEvening ? 0.30 : 0.45}
+              />
+            </mesh>
+            <mesh position={[0, 1.0, 1.75]}>
+              <boxGeometry args={[5.2, 0.4, 0.4]} />
+              <meshStandardMaterial
+                color={isEvening ? "#1e293b" : "#9ea5ad"}
+                metalness={isEvening ? 0.85 : 0.50}
+                roughness={isEvening ? 0.30 : 0.45}
+              />
             </mesh>
           </group>
-        )}
+
+          {/* ─── HEAD ASSEMBLY (Forward-offset at z=2.1m, y=1.0m, facing pitch along +Z) ─── */}
+
+          {/* Mid-Grey Metal Housing Frame (Lighter than mast) */}
+          <mesh position={[0, 1.0, 2.1]} castShadow>
+            <boxGeometry args={[9.6, 5.6, 0.6]} />
+            <meshStandardMaterial
+              color={isEvening ? "#0b0f19" : "#b0b8c0"}
+              metalness={isEvening ? 0.85 : 0.52}
+              roughness={isEvening ? 0.30 : 0.42}
+            />
+          </mesh>
+
+          {/* Slim Anti-Glare Visor on Top */}
+          <mesh position={[0, 3.82, 2.55]} rotation={[0.22, 0, 0]}>
+            <boxGeometry args={[9.8, 0.12, 0.45]} />
+            <meshStandardMaterial
+              color={isEvening ? "#080c14" : "#8e969e"}
+              metalness={isEvening ? 0.70 : 0.50}
+              roughness={isEvening ? 0.40 : 0.45}
+            />
+          </mesh>
+
+          {/* Side Visor Flaps */}
+          {[-4.85, 4.85].map((sx, idx) => (
+            <mesh key={`side-visor-${idx}`} position={[sx, 1.0, 2.45]}>
+              <boxGeometry args={[0.12, 5.6, 0.35]} />
+              <meshStandardMaterial
+                color={isEvening ? "#080c14" : "#8e969e"}
+                metalness={isEvening ? 0.70 : 0.50}
+                roughness={isEvening ? 0.40 : 0.45}
+              />
+            </mesh>
+          ))}
+
+          {/* Rear Maintenance Catwalk & Safety Lattice */}
+          <mesh position={[0, -1.4, 1.3]}>
+            <boxGeometry args={[8.8, 0.2, 1.0]} />
+            <meshStandardMaterial
+              color={isEvening ? "#334155" : "#9ea5ad"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+            />
+          </mesh>
+          <mesh position={[0, -0.8, 0.8]}>
+            <boxGeometry args={[8.8, 1.0, 0.08]} />
+            <meshStandardMaterial
+              color={isEvening ? "#475569" : "#a6aeb6"}
+              metalness={isEvening ? 0.85 : 0.50}
+              roughness={isEvening ? 0.30 : 0.45}
+              wireframe
+            />
+          </mesh>
+
+          {/* Dark Reflector Panel Face Behind Lenses with visible 10x6 precision grid */}
+          <mesh position={[0, 1.0, 2.41]}>
+            <planeGeometry args={[9.2, 5.2]} />
+            <meshStandardMaterial
+              color={isEvening ? "#ffffff" : "#ffffff"}
+              map={isEvening ? lampFaceTexture : lampDayFaceTexture}
+              emissive={isEvening ? "#fffde8" : "#000000"}
+              emissiveMap={isEvening ? lampFaceTexture : undefined}
+              emissiveIntensity={isEvening ? 1.5 : 0.0}
+              roughness={isEvening ? 0.25 : 0.45}
+              metalness={isEvening ? 0.70 : 0.55}
+            />
+          </mesh>
+
+          {/* 60 Micro-Lenses: Paler glass with faint sky reflection & visible grid frame, strictly no glow in Day Mode */}
+          {[-4.05, -3.15, -2.25, -1.35, -0.45, 0.45, 1.35, 2.25, 3.15, 4.05].map((bx, bi) =>
+            [-2.0, -1.2, -0.4, 0.4, 1.2, 2.0].map((by, ri) => (
+              <group key={`bulb-grp-${bi}-${ri}`} position={[bx, 1.0 + by, 2.43]}>
+                {/* Outer lens bezel collar ring for crisp visible grid definition */}
+                {!isEvening && (
+                  <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.01]}>
+                    <cylinderGeometry args={[0.35, 0.38, 0.04, 12]} />
+                    <meshStandardMaterial color="#2d3748" metalness={0.65} roughness={0.35} />
+                  </mesh>
+                )}
+                {/* Lens face: paler glass with faint sky reflection, zero emissive in day */}
+                <mesh rotation={[Math.PI / 2, 0, 0]}>
+                  <cylinderGeometry args={[0.31, 0.35, 0.07, 12]} />
+                  <meshStandardMaterial
+                    color={isEvening ? "#ffffff" : "#f2f7fa"}
+                    emissive={isEvening ? "#ffffff" : "#000000"}
+                    emissiveIntensity={isEvening ? 3.2 : 0.0}
+                    roughness={isEvening ? 0.08 : 0.12}
+                    metalness={isEvening ? 0.20 : 0.52}
+                  />
+                </mesh>
+              </group>
+            ))
+          )}
+
+          {/* Optical Star Glare Sprite centered on lamp head (scales with camera distance, no big flat halo) */}
+          {isEvening && (
+            <mesh ref={starFlareRef} position={[0, 1.0, 2.50]}>
+              <planeGeometry args={[2.8, 2.8]} />
+              <meshBasicMaterial
+                map={starFlareTexture}
+                color="#fffdf0"
+                transparent
+                opacity={0.25}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+                depthTest={true}
+              />
+            </mesh>
+          )}
+
+          {/* Faint localized head haze (3 to 5% opacity, fading out within 2.5 meters) */}
+          {isEvening && (
+            <mesh position={[0, 1.0, 2.49]}>
+              <planeGeometry args={[5.2, 3.2]} />
+              <meshBasicMaterial
+                map={headHazeTexture}
+                color="#fffdf2"
+                transparent
+                opacity={0.03}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+                depthTest={true}
+              />
+            </mesh>
+          )}
+
+          {/* Dedicated target object for SpotLight at exact pitch target distance */}
+          <object3D ref={spotTargetRef} position={[0, 1.0, beamLength]} />
+
+          {/* High-CRI Floodlight: wide angle (~1.08 rad), soft penumbra, even illumination across pitch */}
+          <spotLight
+            ref={spotLightRef}
+            position={[0, 1.0, 2.48]}
+            intensity={isEvening ? 135 : 0}
+            color="#fffdf0"
+            angle={1.08}
+            penumbra={0.92}
+            distance={180}
+            decay={1.0}
+            castShadow={!isLiteMode && isEvening && (tower.id.includes('nw') || tower.id.includes('se') || tower.id.includes('west'))}
+            shadow-mapSize={[1024, 1024]}
+            shadow-bias={-0.0003}
+          />
+
+          {/* NOTE: Solid light cone geometry has been deleted; in clear air, beams are invisible */}
+
+          {/* Debug Axis Line and Target Disc on Pitch (enabled via ?debug=1 or toggle button) */}
+          {showBeamAxes && (
+            <group>
+              {/* Axis cylinder from front face z=2.48m to pitch target */}
+              <mesh position={[0, 1.0, (beamLength + 2.48) / 2]} rotation={[-Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[0.10, 0.10, beamLength - 2.48, 8]} />
+                <meshBasicMaterial color="#38bdf8" />
+              </mesh>
+              {/* Target disc on pitch */}
+              <mesh position={[0, 1.0, beamLength]}>
+                <ringGeometry args={[0.8, 1.4, 24]} />
+                <meshBasicMaterial color="#38bdf8" side={THREE.DoubleSide} />
+              </mesh>
+            </group>
+          )}
+        </group>
       </group>
-    </group>
-  );
-};
+    );
+  };
 
 // ─── 4. Seated Spectators on Sold Seats ───
 const CrowdSpectators: React.FC<{
@@ -2635,9 +2635,8 @@ const BlockHitVolumes: React.FC<{
             {/* Floating 3D Block Badge Disc & Text Marker with Html */}
             <Html center position={[0, 2.4, 0]} pointerEvents="none">
               <div
-                className={`px-2.5 py-1 rounded-full text-xs font-bold text-white shadow-xl backdrop-blur-md flex items-center gap-1.5 border border-white/20 whitespace-nowrap transition-transform duration-200 ${
-                  isHovered ? 'scale-125 ring-2 ring-white' : 'scale-100'
-                }`}
+                className={`px-2.5 py-1 rounded-full text-xs font-bold text-white shadow-xl backdrop-blur-md flex items-center gap-1.5 border border-white/20 whitespace-nowrap transition-transform duration-200 ${isHovered ? 'scale-125 ring-2 ring-white' : 'scale-100'
+                  }`}
                 style={{ backgroundColor: `${badgeColor}ee` }}
               >
                 <span>{blk.label}</span>
@@ -2716,87 +2715,87 @@ const StadiumSeatsMesh: React.FC<{
   onPointerOut,
   onClick,
 }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
+    const meshRef = useRef<THREE.InstancedMesh>(null);
 
-  // Position and orient each seat towards the pitch center
-  useLayoutEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh || seatsData.length === 0) return;
-    const dummy = new THREE.Object3D();
+    // Position and orient each seat towards the pitch center
+    useLayoutEffect(() => {
+      const mesh = meshRef.current;
+      if (!mesh || seatsData.length === 0) return;
+      const dummy = new THREE.Object3D();
 
-    for (let i = 0; i < seatsData.length; i++) {
-      const s = seatsData[i];
-      dummy.position.set(s.position[0], s.position[1], s.position[2]);
-      dummy.lookAt(0, s.position[1], 0);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.computeBoundingSphere();
-  }, [seatsData]);
-
-  // Dynamic coloring based on seat status
-  useLayoutEffect(() => {
-    const mesh = meshRef.current;
-    if (!mesh || seatsData.length === 0) return;
-
-    if (!mesh.instanceColor) {
-      mesh.instanceColor = new THREE.InstancedBufferAttribute(
-        new Float32Array(seatsData.length * 3),
-        3
-      );
-    }
-
-    const colSelected = new THREE.Color('#f59e0b');
-    const colActive = new THREE.Color('#fbbf24');
-    const colHover = new THREE.Color('#38bdf8');
-    const colSold = new THREE.Color('#334155');
-
-    const selectedKeys = new Set(
-      selectedSeats.map((s) => `${s.row}-${s.number}`)
-    );
-    const soldSet = new Set(soldKeys);
-
-    for (let i = 0; i < seatsData.length; i++) {
-      const s = seatsData[i];
-      const key = `${s.row}-${s.number}`;
-
-      if (activeSeat && activeSeat.row === s.row && activeSeat.number === s.number) {
-        mesh.setColorAt(i, colActive);
-      } else if (selectedKeys.has(key)) {
-        mesh.setColorAt(i, colSelected);
-      } else if (
-        hoveredSeat &&
-        hoveredSeat.instanceId === s.instanceId &&
-        hoveredSeat.tierType === s.tierType
-      ) {
-        mesh.setColorAt(i, colHover);
-      } else if (soldSet.has(key)) {
-        mesh.setColorAt(i, colSold);
-      } else {
-        mesh.setColorAt(i, s.baseColor);
+      for (let i = 0; i < seatsData.length; i++) {
+        const s = seatsData[i];
+        dummy.position.set(s.position[0], s.position[1], s.position[2]);
+        dummy.lookAt(0, s.position[1], 0);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
       }
-    }
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    }, [seatsData]);
 
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [seatsData, hoveredSeat, selectedSeats, soldKeys, activeSeat]);
+    // Dynamic coloring based on seat status
+    useLayoutEffect(() => {
+      const mesh = meshRef.current;
+      if (!mesh || seatsData.length === 0) return;
 
-  return (
-    <instancedMesh
-      ref={meshRef}
-      args={[seatGeometry, undefined, seatsData.length]}
-      count={seatsData.length}
-      frustumCulled={false}
-      onPointerMove={(e) => onPointerMove(e, tier)}
-      onPointerOut={onPointerOut}
-      onClick={(e) => onClick(e, tier)}
-      castShadow
-      receiveShadow
-    >
-      <meshStandardMaterial roughness={0.84} metalness={0.02} />
-    </instancedMesh>
-  );
-};
+      if (!mesh.instanceColor) {
+        mesh.instanceColor = new THREE.InstancedBufferAttribute(
+          new Float32Array(seatsData.length * 3),
+          3
+        );
+      }
+
+      const colSelected = new THREE.Color('#f59e0b');
+      const colActive = new THREE.Color('#fbbf24');
+      const colHover = new THREE.Color('#38bdf8');
+      const colSold = new THREE.Color('#334155');
+
+      const selectedKeys = new Set(
+        selectedSeats.map((s) => `${s.row}-${s.number}`)
+      );
+      const soldSet = new Set(soldKeys);
+
+      for (let i = 0; i < seatsData.length; i++) {
+        const s = seatsData[i];
+        const key = `${s.row}-${s.number}`;
+
+        if (activeSeat && activeSeat.row === s.row && activeSeat.number === s.number) {
+          mesh.setColorAt(i, colActive);
+        } else if (selectedKeys.has(key)) {
+          mesh.setColorAt(i, colSelected);
+        } else if (
+          hoveredSeat &&
+          hoveredSeat.instanceId === s.instanceId &&
+          hoveredSeat.tierType === s.tierType
+        ) {
+          mesh.setColorAt(i, colHover);
+        } else if (soldSet.has(key)) {
+          mesh.setColorAt(i, colSold);
+        } else {
+          mesh.setColorAt(i, s.baseColor);
+        }
+      }
+
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }, [seatsData, hoveredSeat, selectedSeats, soldKeys, activeSeat]);
+
+    return (
+      <instancedMesh
+        ref={meshRef}
+        args={[seatGeometry, undefined, seatsData.length]}
+        count={seatsData.length}
+        frustumCulled={false}
+        onPointerMove={(e) => onPointerMove(e, tier)}
+        onPointerOut={onPointerOut}
+        onClick={(e) => onClick(e, tier)}
+        castShadow
+        receiveShadow
+      >
+        <meshStandardMaterial roughness={0.84} metalness={0.02} />
+      </instancedMesh>
+    );
+  };
 
 // ─── 6b. Dynamic Stadium Lighting (Night Floodlights & Bright Daylight) ───
 const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = ({ isEvening, isLiteMode }) => {
@@ -3469,9 +3468,8 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
               selectStand(null);
               setStadiumLevel('overview');
             }}
-            className={`font-semibold transition-colors hover:text-white ${
-              stadiumLevel === 'overview' ? 'text-primary font-bold' : 'text-white/60'
-            }`}
+            className={`font-semibold transition-colors hover:text-white ${stadiumLevel === 'overview' ? 'text-primary font-bold' : 'text-white/60'
+              }`}
           >
             Stadium
           </button>
@@ -3486,9 +3484,8 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
                   setStadiumLevel('stand');
                 }}
                 title={currentStand.nameEn}
-                className={`font-semibold transition-colors hover:text-white whitespace-nowrap ${
-                  stadiumLevel === 'stand' ? 'text-primary font-bold' : 'text-white/60'
-                }`}
+                className={`font-semibold transition-colors hover:text-white whitespace-nowrap ${stadiumLevel === 'stand' ? 'text-primary font-bold' : 'text-white/60'
+                  }`}
               >
                 {currentStand.nameEn}
               </button>
@@ -3503,9 +3500,8 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
                 onClick={() => {
                   setStadiumLevel('block');
                 }}
-                className={`font-semibold transition-colors hover:text-white ${
-                  stadiumLevel === 'block' ? 'text-primary font-bold' : 'text-white/60'
-                }`}
+                className={`font-semibold transition-colors hover:text-white ${stadiumLevel === 'block' ? 'text-primary font-bold' : 'text-white/60'
+                  }`}
               >
                 Block {currentBlock.label}
               </button>
@@ -3541,11 +3537,10 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowFilterPopover(!showFilterPopover)}
-                className={`p-2 rounded-full border backdrop-blur-xl transition-all shadow-lg active:scale-95 flex items-center justify-center ${
-                  filterMaxPrice
-                    ? 'bg-primary text-white border-primary shadow-primary/30'
-                    : 'bg-[#060810]/70 hover:bg-[#060810]/95 text-white/70 hover:text-white border-white/15'
-                }`}
+                className={`p-2 rounded-full border backdrop-blur-xl transition-all shadow-lg active:scale-95 flex items-center justify-center ${filterMaxPrice
+                  ? 'bg-primary text-white border-primary shadow-primary/30'
+                  : 'bg-[#060810]/70 hover:bg-[#060810]/95 text-white/70 hover:text-white border-white/15'
+                  }`}
                 title="Price & Quantity Filter"
                 aria-label="Filter seats"
               >
@@ -3578,11 +3573,10 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
                         <button
                           key={cnt}
                           onClick={() => setFilterCount(cnt)}
-                          className={`py-1 rounded-lg text-xs font-semibold border transition-all ${
-                            filterCount === cnt
-                              ? 'bg-primary border-primary text-white'
-                              : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
-                          }`}
+                          className={`py-1 rounded-lg text-xs font-semibold border transition-all ${filterCount === cnt
+                            ? 'bg-primary border-primary text-white'
+                            : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                            }`}
                         >
                           {cnt} {cnt === 1 ? 'seat' : 'seats'}
                         </button>
@@ -3606,11 +3600,10 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
                             setFilterMaxPrice(opt.val);
                             setShowFilterPopover(false);
                           }}
-                          className={`w-full py-1.5 px-2.5 rounded-lg text-left text-xs flex items-center justify-between border transition-all ${
-                            filterMaxPrice === opt.val
-                              ? 'bg-primary/20 border-primary text-white font-semibold'
-                              : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
-                          }`}
+                          className={`w-full py-1.5 px-2.5 rounded-lg text-left text-xs flex items-center justify-between border transition-all ${filterMaxPrice === opt.val
+                            ? 'bg-primary/20 border-primary text-white font-semibold'
+                            : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
+                            }`}
                         >
                           <span>{opt.label}</span>
                           {filterMaxPrice === opt.val && <Check className="w-3.5 h-3.5 text-primary" />}
@@ -3626,11 +3619,10 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
             {isDebugUrl && (
               <button
                 onClick={() => setShowBeamAxes(!showBeamAxes)}
-                className={`p-2 rounded-full border backdrop-blur-xl transition-all shadow-lg active:scale-95 flex items-center justify-center ${
-                  showBeamAxes
-                    ? 'bg-sky-500 text-white border-sky-400 shadow-sky-500/30'
-                    : 'bg-[#060810]/70 hover:bg-[#060810]/95 text-white/70 hover:text-white border-white/15'
-                }`}
+                className={`p-2 rounded-full border backdrop-blur-xl transition-all shadow-lg active:scale-95 flex items-center justify-center ${showBeamAxes
+                  ? 'bg-sky-500 text-white border-sky-400 shadow-sky-500/30'
+                  : 'bg-[#060810]/70 hover:bg-[#060810]/95 text-white/70 hover:text-white border-white/15'
+                  }`}
                 title="Floodlight beam guide axes (visual alignment)"
                 aria-label="Floodlight beam guide axes"
               >

@@ -21,7 +21,7 @@ export function isLowEndDevice(): boolean {
 
   // Check hardware concurrency (CPU cores)
   const cores = navigator.hardwareConcurrency || 4;
-  
+
   // Check device memory (GB) if supported
   const nav = navigator as Navigator & { deviceMemory?: number };
   const memory = nav.deviceMemory || 4;

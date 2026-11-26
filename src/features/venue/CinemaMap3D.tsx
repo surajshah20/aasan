@@ -1517,7 +1517,7 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
       const rowSeats = seatsData
         .filter((s) => s.row === r)
         .sort((a, b) => a.number - b.number);
-      
+
       for (let i = 0; i <= rowSeats.length - count; i++) {
         const candidateRun = rowSeats.slice(i, i + count);
         const allAvailable = candidateRun.every(
@@ -1580,9 +1580,8 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
           {/* Level 3: Hall */}
           <button
             onClick={returnToOverview}
-            className={`font-semibold transition-colors hover:text-white cursor-pointer ${
-              !activeSeat ? 'text-amber-400 font-bold' : 'text-white/70'
-            }`}
+            className={`font-semibold transition-colors hover:text-white cursor-pointer ${!activeSeat ? 'text-amber-400 font-bold' : 'text-white/70'
+              }`}
           >
             {hallName}
           </button>
@@ -1782,7 +1781,7 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
             <div className="hidden sm:flex flex-col items-center pl-2 border-l border-white/10 shrink-0">
               <div className="relative w-24 h-12 rounded-md overflow-hidden bg-[#04060a] border border-white/20 shadow-inner flex items-center justify-center">
                 {/* Curved screen glow simulation */}
-                <div 
+                <div
                   className="absolute top-1 w-20 h-4 rounded-t-full border-t-2 border-cyan-400 bg-gradient-to-b from-teal-500/40 to-transparent shadow-[0_0_8px_rgba(45,212,191,0.6)]"
                   style={{
                     transform: `perspective(60px) rotateX(15deg) translateX(${-(hoveredSeat.position[0] * 2.8)}px)`,

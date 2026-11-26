@@ -21,7 +21,7 @@ export const App: React.FC = () => {
   return (
     <div className={`${currentView === 'venue' ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col bg-bg text-text font-sans selection:bg-crimson selection:text-white`}>
       <Header />
-      
+
       {/* Toast Notification Banner (Used for unavailable/sold seat fallback and URL alerts) */}
       {toastMessage && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-[#12141c]/95 border border-amber-500/40 text-amber-200 text-xs font-semibold shadow-2xl backdrop-blur-xl animate-fadeIn">

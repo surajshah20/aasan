@@ -589,6 +589,12 @@ const CinemaPostProcessing: React.FC<{ quality: 'high' | 'medium' | 'lite' }> = 
 
   useFrame(() => {
     if (composer && quality !== 'lite') {
+      if (typeof window !== 'undefined' && gl.info) {
+        (window as any).__PRE_COMPOSER_SNAPSHOT__ = {
+          calls: gl.info.render.calls,
+          tris: gl.info.render.triangles,
+        };
+      }
       composer.render();
     }
   }, 1);

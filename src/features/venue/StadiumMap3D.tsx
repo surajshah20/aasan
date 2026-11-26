@@ -2978,6 +2978,13 @@ const StadiumPostProcessing: React.FC<{ isEvening: boolean; isLiteMode: boolean 
 
   useFrame((state) => {
     if (composer && isEvening && !isLiteMode) {
+      // Capture pre-composer draw calls and triangles for ?perf=1 overlay
+      if (typeof window !== 'undefined' && gl.info) {
+        (window as any).__PRE_COMPOSER_SNAPSHOT__ = {
+          calls: gl.info.render.calls,
+          tris: gl.info.render.triangles,
+        };
+      }
       composer.render();
     } else {
       state.gl.render(state.scene, state.camera);

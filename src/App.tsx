@@ -4,6 +4,7 @@ import { Footer } from './components/Footer';
 import { LandingHero } from './features/landing/LandingHero';
 import { useBookingStore } from './store/useBookingStore';
 import { initUrlRouting } from './lib/urlRouting';
+import { PerfOverlay } from './components/PerfOverlay';
 import { AlertCircle, X, Loader2 } from 'lucide-react';
 
 const VenueOverview = lazy(() => import('./features/venue/VenueOverview').then((m) => ({ default: m.VenueOverview })));
@@ -52,6 +53,9 @@ export const App: React.FC = () => {
 
       {/* Footer is only rendered on landing, checkout, and ticket views to make 3D venue view 100% hero */}
       {currentView !== 'venue' && <Footer />}
+
+      {/* ?perf=1 Debug Metrics Overlay */}
+      <PerfOverlay />
     </div>
   );
 };

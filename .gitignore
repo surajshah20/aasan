@@ -50,6 +50,8 @@ test_*.png
 # Test outputs
 test-results/
 playwright-report/
+scripts/capture-visuals.cjs
+scripts/compare-visuals.cjs
 
 # OS generated files
 .DS_Store

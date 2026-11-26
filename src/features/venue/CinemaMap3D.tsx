@@ -1,5 +1,6 @@
 import React, { useRef, useMemo, useState, useLayoutEffect, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useDemandRenderManager } from '../../lib/performanceManager';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -636,6 +637,15 @@ const CinemaSceneDisposer: React.FC = () => {
   return null;
 };
 
+// Demand loop coordinator inside Cinema Canvas
+const CinemaDemandLoopCoordinator: React.FC<{
+  isContinuousAnimationActive: boolean;
+  domElementRef?: React.RefObject<HTMLDivElement | null>;
+}> = ({ isContinuousAnimationActive, domElementRef }) => {
+  useDemandRenderManager({ isContinuousAnimationActive, domElementRef });
+  return null;
+};
+
 // ─── Camera Animation Rig ───
 const CinemaCameraRig: React.FC<{
   targetPos: [number, number, number];
@@ -664,6 +674,7 @@ const CinemaCameraRig: React.FC<{
       if (onArrival) onArrival();
     } else if (dist >= 0.2) {
       arrivedRef.current = false;
+      state.invalidate();
     }
   });
 
@@ -1546,8 +1557,10 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
     }
   };
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="w-full h-full relative select-none">
+    <div ref={containerRef} className="w-full h-full relative select-none">
       {/* ─── CINEMA BREADCRUMB & BEST AVAILABLE CONTROLS ─── */}
       <div className="absolute top-3 left-14 sm:left-44 right-3 sm:right-6 z-30 pointer-events-none flex items-center justify-between gap-2">
         {/* Breadcrumb Navigation Pill */}
@@ -1628,6 +1641,7 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
       </div>
 
       <Canvas
+        frameloop="demand"
         camera={{ position: overviewPos, fov: 46 }}
         className="w-full h-full"
         gl={{
@@ -1636,6 +1650,12 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
           powerPreference: 'high-performance',
         }}
       >
+        {/* Demand rendering and tab visibility coordinator */}
+        <CinemaDemandLoopCoordinator
+          isContinuousAnimationActive={!isSeatView}
+          domElementRef={containerRef}
+        />
+
         <color attach="background" args={['#07080e']} />
         <fogExp2 attach="fog" args={['#07080e', 0.014]} />
 

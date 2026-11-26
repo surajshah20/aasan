@@ -1,5 +1,6 @@
 import React, { useRef, useMemo, useState, useEffect, useLayoutEffect } from 'react';
 import { Canvas, useFrame, useThree, ThreeEvent } from '@react-three/fiber';
+import { useDemandRenderManager } from '../../lib/performanceManager';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -92,6 +93,8 @@ const StadiumCameraRig: React.FC<{
       if (onArrival) onArrival();
     } else if (dist >= 0.4) {
       arrivedRef.current = false;
+      // While traveling to a target, keep demanding frames
+      state.invalidate();
     }
   });
 
@@ -2994,6 +2997,15 @@ const StadiumPostProcessing: React.FC<{ isEvening: boolean; isLiteMode: boolean 
   return null;
 };
 
+// Demand loop coordinator inside Canvas
+const StadiumDemandLoopCoordinator: React.FC<{
+  isContinuousAnimationActive: boolean;
+  domElementRef?: React.RefObject<HTMLDivElement | null>;
+}> = ({ isContinuousAnimationActive, domElementRef }) => {
+  useDemandRenderManager({ isContinuousAnimationActive, domElementRef });
+  return null;
+};
+
 // Scene-level Three.js Resource Disposer on Unmount
 const StadiumSceneDisposer: React.FC = () => {
   const { scene, gl } = useThree();
@@ -3308,14 +3320,20 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
   const hoveredBlock = hoveredBlockId ? blocksMap.get(hoveredBlockId) : null;
 
   const isEvening = lightingMode === 'evening';
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // In overview mode, camera has continuous breathing drift and clouds drift in day mode.
+  // In stand, block, and static seat views, continuous loop goes idle once settled.
+  const isContinuousAnimationActive = stadiumLevel === 'overview' && !customCamera;
 
   return (
-    <div className="w-full h-full relative select-none">
+    <div ref={containerRef} className="w-full h-full relative select-none">
       {/* Subtle vignette overlay to draw the eye to the pitch in evening mode */}
       {isEvening && (
         <div className="pointer-events-none absolute inset-0 z-20 shadow-[inset_0_0_120px_rgba(2,6,18,0.65)]" />
       )}
       <Canvas
+        frameloop="demand"
         camera={{ position: [70, 56, 96], fov: 46, near: 0.5, far: 2000 }}
         className="w-full h-full"
         gl={{
@@ -3326,6 +3344,12 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
         }}
         shadows={!isLiteMode}
       >
+        {/* Demand rendering and tab visibility coordinator */}
+        <StadiumDemandLoopCoordinator
+          isContinuousAnimationActive={isContinuousAnimationActive}
+          domElementRef={containerRef}
+        />
+
         <color attach="background" args={[isEvening ? '#010206' : '#8fc0e8']} />
         {!isLiteMode && (
           <fog attach="fog" args={[isEvening ? '#010206' : '#a8cde8', isEvening ? 160 : 140, isEvening ? 680 : 780]} />

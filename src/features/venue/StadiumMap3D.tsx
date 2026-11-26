@@ -2944,7 +2944,15 @@ const StadiumSceneDisposer: React.FC = () => {
     return () => {
       scene.traverse((obj: any) => {
         if (obj.geometry) {
-          obj.geometry.dispose();
+          if (
+            obj.geometry !== _towerMastGeom &&
+            obj.geometry !== _towerLadderGeom &&
+            obj.geometry !== _towerHeadGeom &&
+            obj.geometry !== _lampLensGeom &&
+            obj.geometry !== _lampBezelGeom
+          ) {
+            obj.geometry.dispose();
+          }
         }
         if (obj.material) {
           if (Array.isArray(obj.material)) {

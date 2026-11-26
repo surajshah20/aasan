@@ -9,6 +9,13 @@ interface SeatViewHeadControlsProps {
   seatKey?: string;
 }
 
+const _seatEye = new THREE.Vector3();
+const _seatCenter = new THREE.Vector3();
+const _seatBaseDir = new THREE.Vector3();
+const _seatRight = new THREE.Vector3();
+const _seatFinalLook = new THREE.Vector3();
+const _axisY = new THREE.Vector3(0, 1, 0);
+
 export const SeatViewHeadControls: React.FC<SeatViewHeadControlsProps> = ({
   enabled,
   baseLookAt,
@@ -86,27 +93,23 @@ export const SeatViewHeadControls: React.FC<SeatViewHeadControlsProps> = ({
     const breathY = Math.sin(time * 1.2) * 0.003;
     const swayYaw = Math.cos(time * 0.7) * 0.0015;
 
-    const eyePosition = new THREE.Vector3(
-      seatPos[0],
-      seatPos[1] + breathY,
-      seatPos[2]
-    );
-    const centerLook = new THREE.Vector3(...baseLookAt);
+    _seatEye.set(seatPos[0], seatPos[1] + breathY, seatPos[2]);
+    _seatCenter.set(baseLookAt[0], baseLookAt[1], baseLookAt[2]);
 
     // Compute base direction from eye directly to pitch center
-    const baseDir = new THREE.Vector3().subVectors(centerLook, eyePosition).normalize();
+    _seatBaseDir.subVectors(_seatCenter, _seatEye).normalize();
 
     // Rotate horizontally around global Y (yaw + sway)
-    baseDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw.current + swayYaw);
+    _seatBaseDir.applyAxisAngle(_axisY, yaw.current + swayYaw);
 
     // Rotate vertically around camera's local right axis (pitch)
-    const right = new THREE.Vector3().crossVectors(baseDir, new THREE.Vector3(0, 1, 0)).normalize();
-    baseDir.applyAxisAngle(right, pitch.current);
+    _seatRight.crossVectors(_seatBaseDir, _axisY).normalize();
+    _seatBaseDir.applyAxisAngle(_seatRight, pitch.current);
 
-    const finalLookAt = eyePosition.clone().add(baseDir.multiplyScalar(25));
-    state.camera.position.copy(eyePosition);
+    _seatFinalLook.copy(_seatEye).addScaledVector(_seatBaseDir, 25);
+    state.camera.position.copy(_seatEye);
     state.camera.up.set(0, 1, 0); // Strict zero roll & level horizon
-    state.camera.lookAt(finalLookAt);
+    state.camera.lookAt(_seatFinalLook);
   });
 
   return null;

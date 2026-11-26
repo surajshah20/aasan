@@ -646,6 +646,9 @@ const CinemaDemandLoopCoordinator: React.FC<{
   return null;
 };
 
+const _cinemaTargetV = new THREE.Vector3();
+const _cinemaTargetL = new THREE.Vector3();
+
 // ─── Camera Animation Rig ───
 const CinemaCameraRig: React.FC<{
   targetPos: [number, number, number];
@@ -657,18 +660,18 @@ const CinemaCameraRig: React.FC<{
   const arrivedRef = useRef(false);
 
   useFrame((state) => {
-    const targetV = new THREE.Vector3(...targetPos);
-    const targetL = new THREE.Vector3(...targetLookAt);
+    _cinemaTargetV.set(targetPos[0], targetPos[1], targetPos[2]);
+    _cinemaTargetL.set(targetLookAt[0], targetLookAt[1], targetLookAt[2]);
 
     // Smooth cubic damping
-    state.camera.position.lerp(targetV, 0.05);
-    lookAtRef.current.lerp(targetL, 0.05);
+    state.camera.position.lerp(_cinemaTargetV, 0.05);
+    lookAtRef.current.lerp(_cinemaTargetL, 0.05);
 
     if (!isSeatView) {
       state.camera.lookAt(lookAtRef.current);
     }
 
-    const dist = state.camera.position.distanceTo(targetV);
+    const dist = state.camera.position.distanceTo(_cinemaTargetV);
     if (dist < 0.2 && !arrivedRef.current) {
       arrivedRef.current = true;
       if (onArrival) onArrival();

@@ -34,6 +34,9 @@ interface StadiumMap3DProps {
   onSelectSection?: (sectionId: string) => void;
 }
 
+const _targetV = new THREE.Vector3();
+const _targetL = new THREE.Vector3();
+
 // Camera Animation Rig with smooth easing between levels (1 to 1.5s ease)
 const StadiumCameraRig: React.FC<{
   targetPos: [number, number, number];
@@ -47,19 +50,19 @@ const StadiumCameraRig: React.FC<{
   const arrivedRef = useRef(false);
 
   useFrame((state) => {
-    const targetV = new THREE.Vector3(...targetPos);
-    const targetL = new THREE.Vector3(...targetLookAt);
+    _targetV.set(targetPos[0], targetPos[1], targetPos[2]);
+    _targetL.set(targetLookAt[0], targetLookAt[1], targetLookAt[2]);
 
     if (instant) {
-      state.camera.position.copy(targetV);
-      lookAtRef.current.copy(targetL);
+      state.camera.position.copy(_targetV);
+      lookAtRef.current.copy(_targetL);
       if (state.camera instanceof THREE.PerspectiveCamera) {
         state.camera.fov = fov;
         state.camera.updateProjectionMatrix();
       }
       state.camera.up.set(0, 1, 0);
       if (drillLevel !== 'seat') {
-        state.camera.lookAt(targetL);
+        state.camera.lookAt(_targetL);
       }
       return;
     }
@@ -67,14 +70,14 @@ const StadiumCameraRig: React.FC<{
     // Subtle breathing drift only in overview mode
     if (drillLevel === 'overview') {
       const t = state.clock.getElapsedTime();
-      targetV.x += Math.sin(t * 0.15) * 1.5;
-      targetV.z += Math.cos(t * 0.11) * 1.3;
-      targetV.y += Math.sin(t * 0.08) * 0.4;
+      _targetV.x += Math.sin(t * 0.15) * 1.5;
+      _targetV.z += Math.cos(t * 0.11) * 1.3;
+      _targetV.y += Math.sin(t * 0.08) * 0.4;
     }
 
     // Smooth eased lerp (approx 1.2s transition)
-    state.camera.position.lerp(targetV, 0.075);
-    lookAtRef.current.lerp(targetL, 0.075);
+    state.camera.position.lerp(_targetV, 0.075);
+    lookAtRef.current.lerp(_targetL, 0.075);
 
     state.camera.up.set(0, 1, 0);
 
@@ -87,7 +90,7 @@ const StadiumCameraRig: React.FC<{
       state.camera.lookAt(lookAtRef.current);
     }
 
-    const dist = state.camera.position.distanceTo(targetV);
+    const dist = state.camera.position.distanceTo(_targetV);
     if (dist < 0.4 && !arrivedRef.current) {
       arrivedRef.current = true;
       if (onArrival) onArrival();
@@ -176,13 +179,21 @@ const ProceduralDayClouds: React.FC<{ isEvening: boolean }> = ({ isEvening }) =>
     return arr;
   }, []);
 
-  useFrame((_, delta) => {
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const prefersReducedMotionRef = useRef(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    prefersReducedMotionRef.current = mql.matches;
+    const handler = (e: MediaQueryListEvent) => {
+      prefersReducedMotionRef.current = e.matches;
+    };
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
+  useFrame((_, delta) => {
     // Drifts very slowly across the sky; strictly respects prefers-reduced-motion
-    if (!prefersReducedMotion && cloudsGroupRef.current) {
+    if (!prefersReducedMotionRef.current && cloudsGroupRef.current) {
       cloudsGroupRef.current.rotation.y += delta * 0.0006;
     }
 
@@ -2801,6 +2812,16 @@ const StadiumSeatsMesh: React.FC<{
   };
 
 // ─── 6b. Dynamic Stadium Lighting (Night Floodlights & Bright Daylight) ───
+// Scratch Color objects hoisted out of useFrame in StadiumLighting
+const _cSkyNight = new THREE.Color('#243248');
+const _cSkyDay = new THREE.Color('#b8daf5');
+const _cGroundNight = new THREE.Color('#080a10');
+const _cGroundDay = new THREE.Color('#7a7264');
+const _cBgNight = new THREE.Color('#010206');
+const _cBgDay = new THREE.Color('#8fc0e8');
+const _cFogNight = new THREE.Color('#010206');
+const _cFogDay = new THREE.Color('#a8cde8');
+
 const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = ({ isEvening, isLiteMode }) => {
   const pitchTarget = useMemo(() => {
     const obj = new THREE.Object3D();
@@ -2831,16 +2852,8 @@ const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = (
     }
     if (hemiRef.current) {
       hemiRef.current.intensity = THREE.MathUtils.lerp(0.45, 1.38, f);
-      hemiRef.current.color.lerpColors(
-        new THREE.Color('#243248'),
-        new THREE.Color('#b8daf5'),
-        f
-      );
-      hemiRef.current.groundColor.lerpColors(
-        new THREE.Color('#080a10'),
-        new THREE.Color('#7a7264'),
-        f
-      );
+      hemiRef.current.color.lerpColors(_cSkyNight, _cSkyDay, f);
+      hemiRef.current.groundColor.lerpColors(_cGroundNight, _cGroundDay, f);
     }
     if (nightCenterRef.current) {
       nightCenterRef.current.intensity = THREE.MathUtils.lerp(50.0, 0.0, f);
@@ -2855,18 +2868,10 @@ const StadiumLighting: React.FC<{ isEvening: boolean; isLiteMode: boolean }> = (
 
     // Smoothly blend scene fog and background color
     if (scene.background instanceof THREE.Color) {
-      scene.background.lerpColors(
-        new THREE.Color('#010206'),
-        new THREE.Color('#8fc0e8'),
-        f
-      );
+      scene.background.lerpColors(_cBgNight, _cBgDay, f);
     }
     if (scene.fog && scene.fog instanceof THREE.Fog) {
-      scene.fog.color.lerpColors(
-        new THREE.Color('#010206'),
-        new THREE.Color('#a8cde8'),
-        f
-      );
+      scene.fog.color.lerpColors(_cFogNight, _cFogDay, f);
       scene.fog.near = THREE.MathUtils.lerp(160, 140, f);
       scene.fog.far = THREE.MathUtils.lerp(680, 780, f);
     }

@@ -2224,9 +2224,9 @@ const SingleFloodlightTower: React.FC<{
         {/* 1. Pre-merged Static Tower Mast Geometry */}
         <mesh geometry={_towerMastGeom} castShadow receiveShadow>
           <meshStandardMaterial
-            color={isEvening ? "#475569" : "#9ea5ad"}
-            metalness={isEvening ? 0.85 : 0.50}
-            roughness={isEvening ? 0.30 : 0.45}
+            color={isEvening ? "#64748b" : "#9ea5ad"}
+            metalness={isEvening ? 0.80 : 0.50}
+            roughness={isEvening ? 0.32 : 0.45}
           />
         </mesh>
 
@@ -2246,9 +2246,11 @@ const SingleFloodlightTower: React.FC<{
           {/* Pre-merged Cantilever Bracket, Head Housing Frame, Visors, & Catwalk */}
           <mesh geometry={_towerHeadGeom} castShadow receiveShadow>
             <meshStandardMaterial
-              color={isEvening ? "#0b0f19" : "#b0b8c0"}
-              metalness={isEvening ? 0.85 : 0.52}
-              roughness={isEvening ? 0.30 : 0.42}
+              color={isEvening ? "#1e293b" : "#b0b8c0"}
+              metalness={isEvening ? 0.75 : 0.52}
+              roughness={isEvening ? 0.35 : 0.42}
+              emissive={isEvening ? "#ffeebb" : "#000000"}
+              emissiveIntensity={isEvening ? 0.08 : 0.0}
             />
           </mesh>
 
@@ -2320,6 +2322,21 @@ const SingleFloodlightTower: React.FC<{
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
                 depthTest={true}
+              />
+            </mesh>
+          )}
+
+          {/* Omnidirectional back-glow so towers look lit from every camera angle */}
+          {isEvening && (
+            <mesh position={[0, 1.0, 1.0]}>
+              <sphereGeometry args={[3.8, 12, 8]} />
+              <meshBasicMaterial
+                color="#ffe8b0"
+                transparent
+                opacity={0.06}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+                side={THREE.BackSide}
               />
             </mesh>
           )}

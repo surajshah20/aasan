@@ -196,19 +196,20 @@ export const Header: React.FC = () => {
               className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
                 isLiteMode
                   ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-sm'
-                  : 'bg-white/5 border-white/10 text-slate-300 hover:text-white hover:bg-white/10'
+                  : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300 shadow-sm'
               }`}
-              title={isLiteMode ? 'Switch to 3D View' : 'Switch to 2D Accessible View'}
-              aria-label={isLiteMode ? 'Switch to 3D View' : 'Switch to 2D Accessible View'}
+              title={isLiteMode ? 'Switch to 3D View' : 'Currently in 3D View — click for 2D'}
+              aria-label={isLiteMode ? 'Switch to 3D View' : 'Currently in 3D View — click for 2D'}
               aria-pressed={isLiteMode}
             >
               <Layers className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden md:inline">
-                {isLiteMode ? '2D Accessible View' : '3D View'}
+                {isLiteMode ? 'Switch to 3D' : '3D View'}
               </span>
               <span className="md:hidden font-medium text-[11px]">
                 {isLiteMode ? '2D' : '3D'}
               </span>
+              {!isLiteMode && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />}
             </button>
           )}
 

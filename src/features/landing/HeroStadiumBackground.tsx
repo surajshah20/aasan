@@ -104,10 +104,14 @@ export const HeroStadiumBackground: React.FC = () => {
         </div>
       )}
 
-      {/* Left-to-right dark gradient: high contrast behind left-aligned headline */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0a0b10] via-[#0a0b10]/85 via-42% to-transparent pointer-events-none" />
+      {/* Left-to-right dark gradient: crisp text readability without dimming the stadium */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: 'linear-gradient(to right, #0a0b10 0%, rgba(10,11,16,0.92) 22%, rgba(10,11,16,0.55) 38%, rgba(10,11,16,0.12) 52%, transparent 62%)'
+      }} />
       {/* Subtle bottom fade to transition seamlessly into the content */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#0a0b10] to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0a0b10] via-[#0a0b10]/60 to-transparent pointer-events-none" />
+      {/* Top vignette for header readability */}
+      <div className="absolute top-0 left-0 right-0 h-20 bg-gradient-to-b from-[#0a0b10]/70 to-transparent pointer-events-none" />
     </div>
   );
 };

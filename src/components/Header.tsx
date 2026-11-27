@@ -7,7 +7,7 @@ import { Venue, EventItem } from '../types';
 import { Layers, ArrowLeft, Menu, X } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { t, language, setLanguage } = useT();
+  const { t, language, setLanguage, toggleLanguage } = useT();
   const { 
     currentView, 
     setView, 
@@ -55,6 +55,21 @@ export const Header: React.FC = () => {
     return currentEvent.title?.en || currentEvent.title?.[language] || 'Nepal vs Netherlands — T20 Tri-Series Final';
   }, [currentEvent, isCinema, language]);
 
+  // Mobile Line 1: Clean, concise primary title without subtitle clutter (Zero ellipses)
+  const line1TitleMobile = useMemo(() => {
+    if (isCinema) {
+      const titleEn = currentEvent.title?.en || '';
+      const titleNe = currentEvent.title?.ne || '';
+      const raw = language === 'ne' ? (titleNe || titleEn) : (titleEn || titleNe);
+      return raw.split('(')[0].trim() || 'Lalit Maya';
+    }
+    // Stadium / Matches: primary teams without tourney suffix
+    const raw = language === 'ne' && currentEvent.title?.ne
+      ? currentEvent.title.ne
+      : (currentEvent.title?.en || 'Nepal vs Netherlands');
+    return raw.split(/[—–-]/)[0].trim() || 'Nepal vs Netherlands';
+  }, [currentEvent, isCinema, language]);
+
   // Line 2: Smaller grey text with venue, date and time ("TU International Cricket Ground · Sat, 28 Nov 2026 · 1:15 PM")
   const line2VenueDateTime = useMemo(() => {
     // 1. Venue string
@@ -99,7 +114,25 @@ export const Header: React.FC = () => {
     }
 
     return `${venueStr} · ${dateStr} · ${timeStr}`;
-  }, [currentVenue, currentEvent, isCinema, language]);
+  }, [currentVenue, currentEvent, selectedShowtime, isCinema, language]);
+
+  // Mobile Line 2: Concise venue & showtime (Zero ellipses)
+  const line2VenueDateTimeMobile = useMemo(() => {
+    let venueShort = '';
+    if (isCinema) {
+      const rawName = currentVenue.name?.en || currentVenue.name?.[language] || 'Civil Mall (Audi 1)';
+      venueShort = rawName.replace(/^QFX Cinemas\s*—\s*/i, '').trim();
+    } else {
+      venueShort = language === 'ne' ? 'टि.यु. मैदान' : 'TU Cricket Ground';
+    }
+
+    let timeStr = (selectedShowtime || currentEvent.time || '1:15 PM').trim();
+    if (timeStr.startsWith('0')) {
+      timeStr = timeStr.substring(1);
+    }
+
+    return `${venueShort} · ${timeStr}`;
+  }, [currentVenue, currentEvent, selectedShowtime, isCinema, language]);
 
   const scrollToSection = (id: string) => {
     setMobileNavOpen(false);
@@ -133,7 +166,9 @@ export const Header: React.FC = () => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }
             }}
-            className="flex items-center gap-2 cursor-pointer group"
+            className={`items-center gap-2 cursor-pointer group ${
+              currentView !== 'landing' ? 'hidden sm:flex' : 'flex'
+            }`}
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0a0b10] border border-white/10 flex items-center justify-center p-1 group-hover:border-white/25 transition-colors shadow-sm shrink-0">
               <img src="/brand/symbol.svg" alt="Aasan Logo" className="w-full h-full object-contain" />
@@ -175,14 +210,21 @@ export const Header: React.FC = () => {
 
         {/* Two-Line Center Block for Stadium, Cinema, Seat and Checkout pages */}
         {currentView !== 'landing' && (
-          <div className="flex-1 min-w-0 max-w-[56%] sm:max-w-[62%] mx-auto flex flex-col items-center justify-center text-center px-1 sm:px-2 z-0">
-            {/* Line 1: Full event title (truncated on small mobile so header height stays stable) */}
-            <h1 className="text-xs sm:text-sm md:text-[15px] font-medium text-[#f1f5f9] leading-tight text-center truncate sm:break-words max-w-full">
+          <div className="flex-1 min-w-0 mx-auto flex flex-col items-center justify-center text-center px-1 sm:px-2 z-0">
+            {/* Desktop View (>= sm): Full title and details */}
+            <h1 className="hidden sm:block text-xs sm:text-sm md:text-[15px] font-medium text-[#f1f5f9] leading-tight text-center break-words max-w-full">
               {line1Title}
             </h1>
-            {/* Line 2: Smaller grey text with venue, date and time */}
-            <p className="text-[10px] sm:text-xs text-slate-400 font-normal leading-tight text-center truncate sm:break-words max-w-full mt-0.5">
+            <p className="hidden sm:block text-[10px] sm:text-xs text-slate-400 font-normal leading-tight text-center break-words max-w-full mt-0.5">
               {line2VenueDateTime}
+            </p>
+
+            {/* Mobile View (< sm): Clean, tailored, zero ellipses */}
+            <h1 className="sm:hidden text-xs font-semibold text-[#f1f5f9] leading-tight text-center whitespace-nowrap">
+              {line1TitleMobile}
+            </h1>
+            <p className="sm:hidden text-[10px] text-slate-400 font-normal leading-tight text-center whitespace-nowrap mt-0.5">
+              {line2VenueDateTimeMobile}
             </p>
           </div>
         )}
@@ -213,8 +255,18 @@ export const Header: React.FC = () => {
             </button>
           )}
 
-          {/* Two-option Language Toggle: EN | नेपाली */}
-          <div className="flex items-center rounded-lg border border-white/10 bg-white/5 p-0.5 text-xs">
+          {/* Mobile Single Toggle Language Button (< sm) */}
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            className="sm:hidden px-2 py-1 rounded-lg border border-white/10 bg-white/5 text-[11px] font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer"
+            title="Switch language"
+          >
+            {language === 'ne' ? 'EN' : 'ने'}
+          </button>
+
+          {/* Desktop Two-option Language Toggle: EN | नेपाली (>= sm) */}
+          <div className="hidden sm:flex items-center rounded-lg border border-white/10 bg-white/5 p-0.5 text-xs">
             <button
               type="button"
               onClick={() => setLanguage('en')}

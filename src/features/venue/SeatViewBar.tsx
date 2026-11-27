@@ -50,22 +50,22 @@ export const SeatViewBar: React.FC = () => {
 
   // Requirement 4 & 7: Neutral outline style (white 15% border, off-white text, min 44px touch target)
   const neutralBtnClass =
-    'min-h-[44px] px-2 sm:px-4 py-2 rounded-xl sm:rounded-pill bg-white/[0.08] hover:bg-white/[0.14] text-white/90 hover:text-white text-[11px] sm:text-xs font-semibold border border-white/15 transition-all active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap backdrop-blur-md shadow-sm min-w-0';
+    'min-h-[44px] px-3 sm:px-4 py-2 rounded-xl md:rounded-pill bg-white/[0.08] hover:bg-white/[0.14] text-white/90 hover:text-white text-[11px] sm:text-xs font-semibold border border-white/15 transition-all active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap backdrop-blur-md shadow-sm shrink-0';
 
   // Requirement 4 & 7: "Book this seat" as the only filled, accent-colored button
   const bookBtnClass =
-    'min-h-[44px] px-2 sm:px-5 py-2 rounded-xl sm:rounded-pill bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-bold shadow-lg shadow-amber-500/25 transition-all active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap min-w-0';
+    'min-h-[44px] px-3.5 sm:px-5 py-2 rounded-xl md:rounded-pill bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-[11px] sm:text-xs font-bold shadow-lg shadow-amber-500/25 transition-all active:scale-95 flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap shrink-0';
 
   const disabledLimitBtnClass =
-    'min-h-[44px] px-2 sm:px-4 py-2 rounded-xl sm:rounded-pill bg-white/5 text-white/40 text-[10px] sm:text-xs font-medium border border-white/10 cursor-not-allowed flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap opacity-70 min-w-0';
+    'min-h-[44px] px-3 sm:px-4 py-2 rounded-xl md:rounded-pill bg-white/5 text-white/40 text-[10px] sm:text-xs font-medium border border-white/10 cursor-not-allowed flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap opacity-70 shrink-0';
 
   return (
-    <div className="absolute bottom-2.5 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-3xl px-3 pointer-events-auto animate-fadeIn select-none">
-      {/* Container: on mobile (< sm) stacks info above buttons, on desktop is single horizontal bar */}
-      <div className="px-3 sm:px-5 py-2.5 rounded-2xl sm:rounded-pill shadow-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4 border border-white/15 bg-[#060810]/85 backdrop-blur-3xl">
+    <div className="absolute bottom-2.5 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-4xl px-3 sm:px-4 pointer-events-auto animate-fadeIn select-none flex justify-center">
+      {/* Container: on mobile (< md) stacks info above buttons, on desktop is single horizontal pill */}
+      <div className="w-full sm:w-auto px-4 sm:px-6 py-2.5 rounded-2xl md:rounded-pill shadow-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 md:gap-5 border border-white/15 bg-[#060810]/90 backdrop-blur-3xl">
         
         {/* Seat Information & Price (Requirement 3 & 5) */}
-        <div className="flex items-center justify-between gap-2 sm:gap-3 w-full sm:w-auto shrink-0 min-w-0">
+        <div className="flex items-center justify-between gap-2 sm:gap-3 w-full md:w-auto shrink-0 min-w-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-amber-400 shrink-0 shadow-sm">
               <Armchair className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -95,7 +95,7 @@ export const SeatViewBar: React.FC = () => {
           </div>
 
           {/* Requirement 5: Price larger (~18-20 px), in accent color, on right of seat info */}
-          <div className="pl-2 sm:pl-4 sm:border-l sm:border-white/15 shrink-0 text-right sm:text-left">
+          <div className="pl-2 sm:pl-4 md:border-l md:border-white/15 shrink-0 text-right md:text-left">
             <span className="text-[17px] sm:text-[20px] leading-none font-extrabold text-amber-400 tracking-tight whitespace-nowrap">
               {formatPrice(activeSeat.priceNPR, language)}
             </span>
@@ -103,11 +103,11 @@ export const SeatViewBar: React.FC = () => {
         </div>
 
         {/* Action Buttons (Requirement 1, 4, 6, 7) */}
-        <div className="grid grid-cols-3 sm:flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-end shrink-0">
+        <div className="grid grid-cols-3 md:flex items-center gap-1.5 sm:gap-2 w-full md:w-auto justify-end shrink-0">
           {/* Other Seats (Fly Back to Block/Overview) */}
           <button
             onClick={returnToOverview}
-            className={`w-full sm:w-auto ${neutralBtnClass}`}
+            className={`w-full md:w-auto ${neutralBtnClass}`}
             title="Return to overview"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-white/80 shrink-0" />
@@ -118,7 +118,7 @@ export const SeatViewBar: React.FC = () => {
           {selectedSeats.length >= 8 ? (
             <button
               disabled
-              className={`w-full sm:w-auto ${disabledLimitBtnClass}`}
+              className={`w-full md:w-auto ${disabledLimitBtnClass}`}
               title="Maximum of 8 seats reached"
             >
               <span className="truncate">{language === 'ne' ? 'सीमा पुग्यो (८)' : 'Seat limit reached (8)'}</span>
@@ -126,7 +126,7 @@ export const SeatViewBar: React.FC = () => {
           ) : (
             <button
               onClick={addAnotherSeat}
-              className={`w-full sm:w-auto ${neutralBtnClass}`}
+              className={`w-full md:w-auto ${neutralBtnClass}`}
               title="Add this seat and pick another"
             >
               {/* Requirement 1: Only ONE plus as an icon, no duplicate plus in label */}
@@ -138,7 +138,7 @@ export const SeatViewBar: React.FC = () => {
           {/* Requirement 4: Book this seat (the only filled, accent-colored button) */}
           <button
             onClick={bookCurrentSeat}
-            className={`w-full sm:w-auto ${bookBtnClass}`}
+            className={`w-full md:w-auto ${bookBtnClass}`}
           >
             <Ticket className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">{language === 'ne' ? 'बुक गर्नुहोस्' : 'Book this seat'}</span>

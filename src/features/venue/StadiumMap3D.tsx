@@ -3302,7 +3302,7 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
       <Canvas
         frameloop="demand"
         camera={{ position: [70, 56, 96], fov: 46, near: 0.5, far: 2000 }}
-        className="w-full h-full"
+        className={`w-full h-full ${stadiumLevel === 'seat' ? 'cursor-grab active:cursor-grabbing' : ''}`}
         gl={{
           antialias: true,
           alpha: false,
@@ -3443,6 +3443,16 @@ export const StadiumMap3D: React.FC<StadiumMap3DProps> = ({
           onClick={handleSeatClick}
         />
       </Canvas>
+
+      {/* Seat View Look-Around Guidance Hint */}
+      {stadiumLevel === 'seat' && activeSeat && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 pointer-events-none animate-fadeIn">
+          <div className="px-3.5 py-1.5 rounded-full flex items-center gap-2 text-[11px] text-white/80 bg-black/60 backdrop-blur-md border border-white/10 shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span>Glide cursor or drag to look around · Double-click to re-center</span>
+          </div>
+        </div>
+      )}
 
       {/* ─── BREADCRUMB & TOP CONTROLS ─── */}
       <div className="absolute top-3 left-[56px] sm:left-[176px] right-2 sm:right-5 z-30 pointer-events-none flex items-center justify-between gap-1.5 sm:gap-2">

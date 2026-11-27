@@ -1576,7 +1576,7 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
       <Canvas
         frameloop="demand"
         camera={{ position: overviewPos, fov: 46 }}
-        className="w-full h-full"
+        className={`w-full h-full ${isSeatView ? 'cursor-grab active:cursor-grabbing' : ''}`}
         gl={{
           antialias: true,
           alpha: false,
@@ -1703,6 +1703,16 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
         {/* Step 4: Post-Processing Pipeline (Bloom, ACES, Tone Mapping) */}
         <CinemaPostProcessing quality={qualityLevel} />
       </Canvas>
+
+      {/* Seat View Look-Around Guidance Hint */}
+      {isSeatView && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 pointer-events-none animate-fadeIn">
+          <div className="px-3.5 py-1.5 rounded-full flex items-center gap-2 text-[11px] text-white/80 bg-black/60 backdrop-blur-md border border-white/10 shadow-lg">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span>Glide cursor or drag to look around · Double-click to re-center</span>
+          </div>
+        </div>
+      )}
 
       {/* Step 6: Refined Floating Seat Hover Card in Overview */}
       {hoveredSeat && !activeSeat && (

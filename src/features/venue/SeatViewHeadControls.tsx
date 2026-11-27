@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 interface SeatViewHeadControlsProps {
@@ -22,10 +22,13 @@ export const SeatViewHeadControls: React.FC<SeatViewHeadControlsProps> = ({
   seatPos,
   seatKey,
 }) => {
+  const { invalidate } = useThree();
   const yaw = useRef(0);
   const pitch = useRef(0);
   const targetYaw = useRef(0);
   const targetPitch = useRef(0);
+  const hoverYaw = useRef(0);
+  const hoverPitch = useRef(0);
   const isDragging = useRef(false);
   const previousMouse = useRef({ x: 0, y: 0 });
 
@@ -37,56 +40,95 @@ export const SeatViewHeadControls: React.FC<SeatViewHeadControlsProps> = ({
     pitch.current = 0;
     targetYaw.current = 0;
     targetPitch.current = 0;
+    hoverYaw.current = 0;
+    hoverPitch.current = 0;
     isDragging.current = false;
-  }, [activeKey, enabled]);
+    invalidate();
+  }, [activeKey, enabled, invalidate]);
 
   useEffect(() => {
     if (!enabled) return;
 
     const onPointerDown = (e: PointerEvent) => {
       // Don't drag if clicking buttons, pills, or UI elements
-      if ((e.target as HTMLElement)?.closest('button, .glass-panel, .glass-panel-glow, [role="button"]')) return;
+      if ((e.target as HTMLElement)?.closest('button, .glass-panel, .glass-panel-glow, [role="button"], a, input')) return;
       isDragging.current = true;
       previousMouse.current = { x: e.clientX, y: e.clientY };
+      invalidate();
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      if (!isDragging.current) return;
+      // Don't track if hovering over interactive UI buttons/controls
+      if ((e.target as HTMLElement)?.closest('button, .glass-panel, .glass-panel-glow, [role="button"], a, input')) return;
+
+      if (!isDragging.current) {
+        // Natural cursor tracking: moving cursor toward screen edges smoothly turns the head
+        const normX = (e.clientX / window.innerWidth - 0.5) * 2; // -1 to 1
+        const normY = (e.clientY / window.innerHeight - 0.5) * 2; // -1 to 1
+        hoverYaw.current = -normX * 0.45; // Glance +/- 26 degrees naturally
+        hoverPitch.current = -normY * 0.28; // Glance +/- 16 degrees naturally
+        invalidate();
+        return;
+      }
+
+      // Click-and-drag for full panoramic head rotation
       const dx = e.clientX - previousMouse.current.x;
       const dy = e.clientY - previousMouse.current.y;
       previousMouse.current = { x: e.clientX, y: e.clientY };
 
-      // Update target yaw (horizontal) and pitch (vertical)
-      targetYaw.current -= dx * 0.0032;
-      targetPitch.current -= dy * 0.0026;
+      targetYaw.current -= dx * 0.0045;
+      targetPitch.current -= dy * 0.0035;
 
-      // Clamp yaw to +/- 60 deg (+/- 1.05 radians)
-      targetYaw.current = Math.max(-1.05, Math.min(1.05, targetYaw.current));
-      // Clamp pitch to +/- 30 deg (+/- 0.52 radians)
-      targetPitch.current = Math.max(-0.52, Math.min(0.52, targetPitch.current));
+      // Generous clamp: +/- 85 deg yaw, +/- 45 deg pitch
+      targetYaw.current = Math.max(-1.48, Math.min(1.48, targetYaw.current));
+      targetPitch.current = Math.max(-0.78, Math.min(0.78, targetPitch.current));
+
+      invalidate();
     };
 
     const onPointerUp = () => {
       isDragging.current = false;
+      invalidate();
+    };
+
+    const onDblClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement)?.closest('button, .glass-panel, .glass-panel-glow, [role="button"]')) return;
+      // Double click recenters head orientation
+      targetYaw.current = 0;
+      targetPitch.current = 0;
+      hoverYaw.current = 0;
+      hoverPitch.current = 0;
+      invalidate();
     };
 
     window.addEventListener('pointerdown', onPointerDown);
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('dblclick', onDblClick);
 
     return () => {
       window.removeEventListener('pointerdown', onPointerDown);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('dblclick', onDblClick);
     };
-  }, [enabled]);
+  }, [enabled, invalidate]);
 
   useFrame((state) => {
     if (!enabled) return;
 
+    const totalTargetYaw = targetYaw.current + hoverYaw.current;
+    const totalTargetPitch = targetPitch.current + hoverPitch.current;
+
     // Smooth lerp for head rotation
-    yaw.current += (targetYaw.current - yaw.current) * 0.14;
-    pitch.current += (targetPitch.current - pitch.current) * 0.14;
+    yaw.current += (totalTargetYaw - yaw.current) * 0.14;
+    pitch.current += (totalTargetPitch - pitch.current) * 0.14;
+
+    // Keep demand render loop active while damping toward target or dragging
+    const diff = Math.abs(totalTargetYaw - yaw.current) + Math.abs(totalTargetPitch - pitch.current);
+    if (diff > 0.0003 || isDragging.current) {
+      state.invalidate();
+    }
 
     // Organic breathing & subtle head sway motion
     const time = state.clock.getElapsedTime();
@@ -96,7 +138,7 @@ export const SeatViewHeadControls: React.FC<SeatViewHeadControlsProps> = ({
     _seatEye.set(seatPos[0], seatPos[1] + breathY, seatPos[2]);
     _seatCenter.set(baseLookAt[0], baseLookAt[1], baseLookAt[2]);
 
-    // Compute base direction from eye directly to pitch center
+    // Compute base direction from eye directly to pitch/screen center
     _seatBaseDir.subVectors(_seatCenter, _seatEye).normalize();
 
     // Rotate horizontally around global Y (yaw + sway)

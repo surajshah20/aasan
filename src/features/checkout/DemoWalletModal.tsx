@@ -126,7 +126,7 @@ export const DemoWalletModal: React.FC<DemoWalletModalProps> = ({
       aria-labelledby="demo-wallet-title"
     >
       <div 
-        className="relative w-full max-w-md rounded-2xl bg-[#12141c] border border-white/15 p-6 shadow-2xl space-y-5 text-white"
+        className="relative w-full max-w-md rounded-2xl bg-[#12141c] border border-white/15 p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 text-white"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header with provider badge & close */}

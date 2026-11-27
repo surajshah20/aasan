@@ -206,7 +206,7 @@ export const LandingHero: React.FC = () => {
           {/* Entry 1: Stadium */}
           <div
             id="stadium-section"
-            className="relative rounded-xl border border-white/10 overflow-hidden bg-[#12141c] p-6 sm:p-8 flex flex-col gap-6"
+            className="relative rounded-xl border border-white/10 overflow-hidden bg-[#12141c] p-4 sm:p-8 flex flex-col gap-6"
           >
             {/* Background 3D screenshot evenly darkened, with no UI chrome */}
             <div className="absolute inset-0 pointer-events-none">
@@ -281,7 +281,7 @@ export const LandingHero: React.FC = () => {
           {/* Entry 2: Cinemas */}
           <div
             id="cinemas-section"
-            className="relative rounded-xl border border-white/10 overflow-hidden bg-[#12141c] p-6 sm:p-8 flex flex-col gap-6"
+            className="relative rounded-xl border border-white/10 overflow-hidden bg-[#12141c] p-4 sm:p-8 flex flex-col gap-6"
           >
             {/* Background 3D screenshot evenly darkened, with no UI chrome */}
             <div className="absolute inset-0 pointer-events-none">

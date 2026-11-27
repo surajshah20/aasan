@@ -175,13 +175,13 @@ export const Header: React.FC = () => {
 
         {/* Two-Line Center Block for Stadium, Cinema, Seat and Checkout pages */}
         {currentView !== 'landing' && (
-          <div className="flex-1 min-w-0 max-w-[62%] mx-auto flex flex-col items-center justify-center text-center px-1 sm:px-2 z-0">
-            {/* Line 1: Full event title (medium weight, off-white, no ellipsis) */}
-            <h1 className="text-xs sm:text-sm md:text-[15px] font-medium text-[#f1f5f9] leading-tight text-center break-words max-w-full">
+          <div className="flex-1 min-w-0 max-w-[56%] sm:max-w-[62%] mx-auto flex flex-col items-center justify-center text-center px-1 sm:px-2 z-0">
+            {/* Line 1: Full event title (truncated on small mobile so header height stays stable) */}
+            <h1 className="text-xs sm:text-sm md:text-[15px] font-medium text-[#f1f5f9] leading-tight text-center truncate sm:break-words max-w-full">
               {line1Title}
             </h1>
             {/* Line 2: Smaller grey text with venue, date and time */}
-            <p className="text-[10px] sm:text-xs text-slate-400 font-normal leading-tight text-center break-words max-w-full mt-0.5">
+            <p className="text-[10px] sm:text-xs text-slate-400 font-normal leading-tight text-center truncate sm:break-words max-w-full mt-0.5">
               {line2VenueDateTime}
             </p>
           </div>

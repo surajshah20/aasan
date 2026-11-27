@@ -370,14 +370,14 @@ export const VenueOverview: React.FC = () => {
 
         {/* Floating Cart Bar in Overview Mode (when seats are selected) */}
         {!isInSeatView && selectedSeats.length > 0 && !isLiteMode && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4 pointer-events-auto">
-            <div className="glass-panel-glow px-4 sm:px-6 py-3 rounded-2xl sm:rounded-pill shadow-2xl flex items-center justify-between gap-4 border border-white/15 animate-fadeIn">
-              <div className="flex items-center gap-3 overflow-x-auto">
-                <div className="w-8 h-8 rounded-full bg-crimson/20 border border-crimson/50 flex items-center justify-center text-crimson shrink-0 shadow-glow-crimson">
-                  <Ticket className="w-4 h-4" />
+          <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-2.5 sm:px-4 pointer-events-auto">
+            <div className="glass-panel-glow px-3 sm:px-6 py-2 sm:py-3 rounded-2xl sm:rounded-pill shadow-2xl flex items-center justify-between gap-2.5 sm:gap-4 border border-white/15 animate-fadeIn">
+              <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto min-w-0">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-crimson/20 border border-crimson/50 flex items-center justify-center text-crimson shrink-0 shadow-glow-crimson">
+                  <Ticket className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 whitespace-nowrap">
                     <span className="text-xs font-bold text-white">
                       {selectedSeats.length} {t('seats_selected')}
                     </span>
@@ -386,7 +386,7 @@ export const VenueOverview: React.FC = () => {
                       {formatPrice(totalNPR, language)}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-0.5 overflow-x-auto max-w-[280px] sm:max-w-xs py-0.5 scrollbar-none">
+                  <div className="flex items-center gap-1.5 mt-0.5 overflow-x-auto max-w-[200px] xs:max-w-[260px] sm:max-w-xs py-0.5 scrollbar-none">
                     {selectedSeats.map((s) => {
                       const seatKey = getSeatId(s);
                       // Stand / Block prefix, e.g. "P1 · A1", "East · A1", "Audi 1 · K6"
@@ -429,9 +429,10 @@ export const VenueOverview: React.FC = () => {
 
               <button
                 onClick={() => setView('checkout')}
-                className="px-5 py-2.5 rounded-pill bg-crimson hover:bg-crimson-dark text-white text-xs font-bold shadow-glow-crimson transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
+                className="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-pill bg-crimson hover:bg-crimson-dark text-white text-xs font-bold shadow-glow-crimson transition-all active:scale-95 flex items-center gap-1 sm:gap-1.5 shrink-0"
               >
-                <span>{t('continue_to_checkout')}</span>
+                <span className="hidden sm:inline">{t('continue_to_checkout')}</span>
+                <span className="sm:hidden">{language === 'ne' ? 'चेकआउट' : 'Checkout'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>

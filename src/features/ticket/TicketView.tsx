@@ -315,11 +315,11 @@ export const TicketView: React.FC = () => {
 
         {/* Requirement 4: Prominent Diagonal DEMO Mark Watermark across the Ticket */}
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-hidden">
-          <div className="rotate-[-25deg] transform border-4 border-crimson/35 bg-crimson/15 px-8 sm:px-14 py-3 sm:py-4 rounded-2xl shadow-2xl backdrop-blur-[1px] text-center">
-            <span className="font-mono font-black text-xl sm:text-2xl tracking-[0.25em] text-white/90 drop-shadow block">
+          <div className="rotate-[-25deg] transform border-2 sm:border-4 border-crimson/35 bg-crimson/15 px-4 sm:px-14 py-2 sm:py-4 rounded-xl sm:rounded-2xl shadow-2xl backdrop-blur-[1px] text-center max-w-[90%]">
+            <span className="font-mono font-black text-sm xs:text-base sm:text-2xl tracking-[0.12em] sm:tracking-[0.25em] text-white/90 drop-shadow block">
               DEMO — NOT VALID FOR ENTRY
             </span>
-            <span className="text-[10px] sm:text-xs font-medium text-crimson-light tracking-wider block mt-0.5">
+            <span className="text-[9px] sm:text-xs font-medium text-crimson-light tracking-wider block mt-0.5">
               डेमो टिकट • वास्तविक प्रवेशको लागि मान्य छैन
             </span>
           </div>

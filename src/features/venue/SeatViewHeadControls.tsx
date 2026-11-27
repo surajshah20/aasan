@@ -50,23 +50,20 @@ export const SeatViewHeadControls: React.FC<SeatViewHeadControlsProps> = ({
     if (!enabled) return;
 
     const onPointerDown = (e: PointerEvent) => {
-      // Don't drag if clicking buttons, pills, or UI elements
-      if ((e.target as HTMLElement)?.closest('button, .glass-panel, .glass-panel-glow, [role="button"], a, input')) return;
+      // Don't drag if clicking buttons, links, or input controls
+      if ((e.target as HTMLElement)?.closest('button, a, input, select, textarea, [role="button"]')) return;
       isDragging.current = true;
       previousMouse.current = { x: e.clientX, y: e.clientY };
       invalidate();
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      // Don't track if hovering over interactive UI buttons/controls
-      if ((e.target as HTMLElement)?.closest('button, .glass-panel, .glass-panel-glow, [role="button"], a, input')) return;
-
       if (!isDragging.current) {
         // Natural cursor tracking: moving cursor toward screen edges smoothly turns the head
         const normX = (e.clientX / window.innerWidth - 0.5) * 2; // -1 to 1
         const normY = (e.clientY / window.innerHeight - 0.5) * 2; // -1 to 1
-        hoverYaw.current = -normX * 0.45; // Glance +/- 26 degrees naturally
-        hoverPitch.current = -normY * 0.28; // Glance +/- 16 degrees naturally
+        hoverYaw.current = -normX * 0.75; // Glance +/- 43 degrees naturally to sides
+        hoverPitch.current = -normY * 0.40; // Glance +/- 23 degrees naturally up/down
         invalidate();
         return;
       }
@@ -76,12 +73,12 @@ export const SeatViewHeadControls: React.FC<SeatViewHeadControlsProps> = ({
       const dy = e.clientY - previousMouse.current.y;
       previousMouse.current = { x: e.clientX, y: e.clientY };
 
-      targetYaw.current -= dx * 0.0045;
-      targetPitch.current -= dy * 0.0035;
+      targetYaw.current -= dx * 0.0055;
+      targetPitch.current -= dy * 0.0045;
 
-      // Generous clamp: +/- 85 deg yaw, +/- 45 deg pitch
-      targetYaw.current = Math.max(-1.48, Math.min(1.48, targetYaw.current));
-      targetPitch.current = Math.max(-0.78, Math.min(0.78, targetPitch.current));
+      // Generous clamp: +/- 100 deg yaw, +/- 55 deg pitch
+      targetYaw.current = Math.max(-1.75, Math.min(1.75, targetYaw.current));
+      targetPitch.current = Math.max(-0.95, Math.min(0.95, targetPitch.current));
 
       invalidate();
     };
@@ -92,7 +89,7 @@ export const SeatViewHeadControls: React.FC<SeatViewHeadControlsProps> = ({
     };
 
     const onDblClick = (e: MouseEvent) => {
-      if ((e.target as HTMLElement)?.closest('button, .glass-panel, .glass-panel-glow, [role="button"]')) return;
+      if ((e.target as HTMLElement)?.closest('button, a, input, select, textarea, [role="button"]')) return;
       // Double click recenters head orientation
       targetYaw.current = 0;
       targetPitch.current = 0;
@@ -121,8 +118,8 @@ export const SeatViewHeadControls: React.FC<SeatViewHeadControlsProps> = ({
     const totalTargetPitch = targetPitch.current + hoverPitch.current;
 
     // Smooth lerp for head rotation
-    yaw.current += (totalTargetYaw - yaw.current) * 0.14;
-    pitch.current += (totalTargetPitch - pitch.current) * 0.14;
+    yaw.current += (totalTargetYaw - yaw.current) * 0.18;
+    pitch.current += (totalTargetPitch - pitch.current) * 0.18;
 
     // Keep demand render loop active while damping toward target or dragging
     const diff = Math.abs(totalTargetYaw - yaw.current) + Math.abs(totalTargetPitch - pitch.current);

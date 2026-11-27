@@ -2652,87 +2652,91 @@ const StadiumSeatsMesh: React.FC<{
   onPointerOut,
   onClick,
 }) => {
-    const meshRef = useRef<THREE.InstancedMesh>(null);
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const { invalidate } = useThree();
 
-    // Position and orient each seat towards the pitch center
-    useLayoutEffect(() => {
-      const mesh = meshRef.current;
-      if (!mesh || seatsData.length === 0) return;
-      const dummy = new THREE.Object3D();
+  // Position and orient each seat towards the pitch center
+  useLayoutEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh || seatsData.length === 0) return;
+    const dummy = new THREE.Object3D();
 
-      for (let i = 0; i < seatsData.length; i++) {
-        const s = seatsData[i];
-        dummy.position.set(s.position[0], s.position[1], s.position[2]);
-        dummy.lookAt(0, s.position[1], 0);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(i, dummy.matrix);
-      }
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.computeBoundingSphere();
-    }, [seatsData]);
+    for (let i = 0; i < seatsData.length; i++) {
+      const s = seatsData[i];
+      dummy.position.set(s.position[0], s.position[1], s.position[2]);
+      dummy.lookAt(0, s.position[1], 0);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+    invalidate();
+  }, [seatsData, seatGeometry, invalidate]);
 
-    // Dynamic coloring based on seat status
-    useLayoutEffect(() => {
-      const mesh = meshRef.current;
-      if (!mesh || seatsData.length === 0) return;
+  // Dynamic coloring based on seat status
+  useLayoutEffect(() => {
+    const mesh = meshRef.current;
+    if (!mesh || seatsData.length === 0) return;
 
-      if (!mesh.instanceColor) {
-        mesh.instanceColor = new THREE.InstancedBufferAttribute(
-          new Float32Array(seatsData.length * 3),
-          3
-        );
-      }
-
-      const colSelected = new THREE.Color('#f59e0b');
-      const colActive = new THREE.Color('#fbbf24');
-      const colHover = new THREE.Color('#38bdf8');
-      const colSold = new THREE.Color('#334155');
-
-      const selectedKeys = new Set(
-        selectedSeats.map((s) => `${s.row}-${s.number}`)
+    if (!mesh.instanceColor || mesh.instanceColor.count !== seatsData.length) {
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(
+        new Float32Array(seatsData.length * 3),
+        3
       );
-      const soldSet = new Set(soldKeys);
+    }
 
-      for (let i = 0; i < seatsData.length; i++) {
-        const s = seatsData[i];
-        const key = `${s.row}-${s.number}`;
+    const colSelected = new THREE.Color('#f59e0b');
+    const colActive = new THREE.Color('#fbbf24');
+    const colHover = new THREE.Color('#38bdf8');
+    const colSold = new THREE.Color('#334155');
 
-        if (activeSeat && activeSeat.row === s.row && activeSeat.number === s.number) {
-          mesh.setColorAt(i, colActive);
-        } else if (selectedKeys.has(key)) {
-          mesh.setColorAt(i, colSelected);
-        } else if (
-          hoveredSeat &&
-          hoveredSeat.instanceId === s.instanceId &&
-          hoveredSeat.tierType === s.tierType
-        ) {
-          mesh.setColorAt(i, colHover);
-        } else if (soldSet.has(key)) {
-          mesh.setColorAt(i, colSold);
-        } else {
-          mesh.setColorAt(i, s.baseColor);
-        }
-      }
-
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    }, [seatsData, hoveredSeat, selectedSeats, soldKeys, activeSeat]);
-
-    return (
-      <instancedMesh
-        ref={meshRef}
-        args={[seatGeometry, undefined, seatsData.length]}
-        count={seatsData.length}
-        frustumCulled={false}
-        onPointerMove={isInteractive ? (e) => onPointerMove(e, tier) : undefined}
-        onPointerOut={isInteractive ? onPointerOut : undefined}
-        onClick={isInteractive ? (e) => onClick(e, tier) : undefined}
-        castShadow
-        receiveShadow
-      >
-        <meshStandardMaterial roughness={0.84} metalness={0.02} />
-      </instancedMesh>
+    const selectedKeys = new Set(
+      selectedSeats.map((s) => `${s.row}-${s.number}`)
     );
-  };
+    const soldSet = new Set(soldKeys);
+
+    for (let i = 0; i < seatsData.length; i++) {
+      const s = seatsData[i];
+      const key = `${s.row}-${s.number}`;
+
+      if (activeSeat && activeSeat.row === s.row && activeSeat.number === s.number) {
+        mesh.setColorAt(i, colActive);
+      } else if (selectedKeys.has(key)) {
+        mesh.setColorAt(i, colSelected);
+      } else if (
+        hoveredSeat &&
+        hoveredSeat.instanceId === s.instanceId &&
+        hoveredSeat.tierType === s.tierType
+      ) {
+        mesh.setColorAt(i, colHover);
+      } else if (soldSet.has(key)) {
+        mesh.setColorAt(i, colSold);
+      } else {
+        mesh.setColorAt(i, s.baseColor);
+      }
+    }
+
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    invalidate();
+  }, [seatsData, seatGeometry, hoveredSeat, selectedSeats, soldKeys, activeSeat, invalidate]);
+
+  return (
+    <instancedMesh
+      key={`${tier}-${seatGeometry.id}`}
+      ref={meshRef}
+      args={[seatGeometry, undefined, seatsData.length]}
+      count={seatsData.length}
+      frustumCulled={false}
+      onPointerMove={isInteractive ? (e) => onPointerMove(e, tier) : undefined}
+      onPointerOut={isInteractive ? onPointerOut : undefined}
+      onClick={isInteractive ? (e) => onClick(e, tier) : undefined}
+      castShadow
+      receiveShadow
+    >
+      <meshStandardMaterial roughness={0.84} metalness={0.02} />
+    </instancedMesh>
+  );
+};
 
 // ─── 6b. Dynamic Stadium Lighting (Night Floodlights & Bright Daylight) ───
 // Scratch Color objects hoisted out of useFrame in StadiumLighting

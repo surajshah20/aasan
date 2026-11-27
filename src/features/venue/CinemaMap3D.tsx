@@ -1499,7 +1499,7 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
         {/* Breadcrumb Navigation Pill */}
         <nav
           aria-label="Cinema Breadcrumb"
-          className="pointer-events-auto px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs text-white/90 shadow-2xl border border-white/15 bg-[#060810]/85 backdrop-blur-xl shrink overflow-x-auto no-scrollbar whitespace-nowrap"
+          className="pointer-events-auto max-w-[calc(100vw-180px)] sm:max-w-[55vw] px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs text-white/90 shadow-2xl border border-white/15 bg-[#060810]/85 backdrop-blur-xl shrink overflow-x-auto no-scrollbar whitespace-nowrap"
         >
           {activeSeat && (
             <button
@@ -1523,7 +1523,7 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
           <ChevronRight className="w-3.5 h-3.5 text-white/30 shrink-0" />
 
           {/* Level 2: Chain */}
-          <span className="font-medium text-white/80">
+          <span className="font-medium text-white/80 max-w-[120px] sm:max-w-[160px] truncate">
             {chainName}
           </span>
 
@@ -1532,7 +1532,7 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
           {/* Level 3: Hall */}
           <button
             onClick={returnToOverview}
-            className={`font-semibold transition-colors hover:text-white cursor-pointer ${!activeSeat ? 'text-amber-400 font-bold' : 'text-white/70'
+            className={`font-semibold transition-colors hover:text-white cursor-pointer max-w-[140px] sm:max-w-[200px] truncate ${!activeSeat ? 'text-amber-400 font-bold' : 'text-white/70'
               }`}
           >
             {hallName}
@@ -1542,7 +1542,7 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
           {activeSeat && (
             <>
               <ChevronRight className="w-3.5 h-3.5 text-white/30 shrink-0" />
-              <span className="font-bold text-amber-400 flex items-center gap-1">
+              <span className="font-bold text-amber-400 flex items-center gap-1 shrink-0">
                 <Armchair className="w-3 h-3 text-amber-400" />
                 Row {activeSeat.row} · Seat {activeSeat.number}
               </span>
@@ -1706,8 +1706,8 @@ export const CinemaMap3D: React.FC<CinemaMap3DProps> = ({
 
       {/* Seat View Look-Around Guidance Hint */}
       {isSeatView && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 pointer-events-none animate-fadeIn">
-          <div className="px-3.5 py-1.5 rounded-full flex items-center gap-2 text-[11px] text-white/80 bg-black/60 backdrop-blur-md border border-white/10 shadow-lg">
+        <div className="absolute top-14 sm:top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none animate-fadeIn">
+          <div className="px-3.5 py-1.5 rounded-full flex items-center gap-2 text-[11px] text-white/80 bg-black/60 backdrop-blur-md border border-white/10 shadow-lg whitespace-nowrap">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
             <span>Glide cursor or drag to look around · Double-click to re-center</span>
           </div>

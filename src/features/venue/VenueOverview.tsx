@@ -239,31 +239,18 @@ export const VenueOverview: React.FC = () => {
         </div>
       )}
 
-      {/* Floating Centered Hint Pill (Auto-fades after a few seconds or on interaction) */}
-      {(isInSeatView || currentVenue.type === 'cinema') && (
+      {/* Floating Centered Discovery Hint Pill in Overview (Auto-fades after a few seconds or on interaction) */}
+      {!isInSeatView && currentVenue.type === 'cinema' && (
         <div 
-          className={`absolute top-14 sm:top-3.5 left-1/2 -translate-x-1/2 z-20 pointer-events-none transition-all duration-700 ${
+          className={`absolute top-14 sm:top-14 left-1/2 -translate-x-1/2 z-20 pointer-events-none transition-all duration-700 ${
             hintVisible ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-95'
           }`}
         >
-          <div className="px-3.5 py-1.5 rounded-full bg-[#060810]/75 backdrop-blur-xl border border-white/15 text-xs text-white/90 shadow-2xl flex items-center gap-2">
-            {isInSeatView ? (
-              <>
-                <Eye className="w-3.5 h-3.5 text-crimson animate-pulse" />
-                <span className="font-medium">{t('view_from_seat')}</span>
-                <span className="text-white/30">•</span>
-                <span className="text-white/70 text-[11px] hidden sm:inline">
-                  {language === 'ne' ? 'हेर्नका लागि दायाँ-बायाँ घुमाउनुहोस् (±६०°)' : 'Drag to look around (±60°)'}
-                </span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-white/80 text-xs">
-                  {language === 'ne' ? 'सिटमा क्लिक गरी प्रत्यक्ष दृश्य हेर्नुहोस्' : 'Click any seat to fly into its view'}
-                </span>
-              </>
-            )}
+          <div className="px-3.5 py-1.5 rounded-full bg-[#060810]/75 backdrop-blur-xl border border-white/15 text-xs text-white/90 shadow-2xl flex items-center gap-2 whitespace-nowrap">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span className="text-white/80 text-xs">
+              {language === 'ne' ? 'सिटमा क्लिक गरी प्रत्यक्ष दृश्य हेर्नुहोस्' : 'Click any seat to fly into its view'}
+            </span>
           </div>
         </div>
       )}

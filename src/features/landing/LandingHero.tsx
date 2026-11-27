@@ -5,7 +5,7 @@ import venuesData from '../../data/venues.json';
 import eventsData from '../../data/events.json';
 import { Venue } from '../../types';
 import { HeroStadiumBackground } from './HeroStadiumBackground';
-import { Search, ArrowRight, Calendar } from 'lucide-react';
+import { Search, ArrowRight, Calendar, MapPin } from 'lucide-react';
 
 export const LandingHero: React.FC = () => {
   const { language } = useT();
@@ -425,8 +425,58 @@ export const LandingHero: React.FC = () => {
           </div>
         </div>
 
-        {/* Compact Table (Scrolls horizontally at small viewport) */}
-        <div className="rounded-xl border border-white/10 overflow-hidden bg-[#12141c]/40">
+        {/* Mobile Cards Layout (< sm) */}
+        <div className="sm:hidden space-y-3">
+          {filteredCinemas.length === 0 ? (
+            <div className="py-8 text-center text-slate-500 text-xs bg-[#12141c]/40 rounded-xl border border-white/10">
+              {language === 'ne' ? 'कुनै हल भेटिएन।' : 'No cinemas match your search.'}
+            </div>
+          ) : (
+            filteredCinemas.map((cinema) => {
+              const minPrice = Math.min(...cinema.sections.map((s) => s.priceNPR));
+              const matchedEvent = eventsData.find((e) => e.venueId === cinema.id) || eventsData[0];
+
+              return (
+                <div
+                  key={cinema.id}
+                  className="p-4 rounded-xl border border-white/10 bg-[#12141c]/60 backdrop-blur-sm flex flex-col gap-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-white/10 text-slate-300 uppercase tracking-wider mb-1">
+                        {cinema.chain || 'Independent'}
+                      </span>
+                      <h3 className="text-sm font-semibold text-[#f1f5f9] leading-snug">
+                        {cinema.name[language]}
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        <span className="truncate">{cinema.location}</span>
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-[10px] uppercase tracking-wider text-slate-500">from</div>
+                      <div className="text-sm font-bold text-amber-400 font-mono">
+                        NPR {minPrice}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => selectVenue(cinema.id, matchedEvent.id)}
+                    className="w-full py-2.5 px-4 rounded-lg bg-[#dc143c] hover:bg-[#b01030] text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>{language === 'ne' ? 'सिट हेर्नुहोस्' : 'View seats'}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table (>= sm) */}
+        <div className="hidden sm:block rounded-xl border border-white/10 overflow-hidden bg-[#12141c]/40">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs min-w-[560px] sm:min-w-full">
               <thead>

@@ -53,26 +53,30 @@ const StadiumCameraRig: React.FC<{
     _targetV.set(targetPos[0], targetPos[1], targetPos[2]);
     _targetL.set(targetLookAt[0], targetLookAt[1], targetLookAt[2]);
 
-    if (instant) {
-      state.camera.position.copy(_targetV);
-      lookAtRef.current.copy(_targetL);
-      if (state.camera instanceof THREE.PerspectiveCamera) {
-        state.camera.fov = fov;
-        state.camera.updateProjectionMatrix();
-      }
-      state.camera.up.set(0, 1, 0);
-      if (drillLevel !== 'seat') {
-        state.camera.lookAt(_targetL);
-      }
-      return;
-    }
-
-    // Subtle breathing drift only in overview mode
+    const aspect = state.size.width / Math.max(1, state.size.height);
     if (drillLevel === 'overview') {
+      // On narrow / portrait mobile viewports (aspect < 1.35), scale camera distance
+      // back so the full oval stadium and floodlight towers fit horizontally
+      if (aspect < 1.35) {
+        const portraitScale = Math.min(2.15, 1.35 / Math.max(0.42, aspect));
+        _targetV.x = targetLookAt[0] + (targetPos[0] - targetLookAt[0]) * portraitScale;
+        _targetV.y = targetLookAt[1] + (targetPos[1] - targetLookAt[1]) * (1 + (portraitScale - 1) * 0.72);
+        _targetV.z = targetLookAt[2] + (targetPos[2] - targetLookAt[2]) * portraitScale;
+      }
       const t = state.clock.getElapsedTime();
       _targetV.x += Math.sin(t * 0.15) * 1.5;
       _targetV.z += Math.cos(t * 0.11) * 1.3;
       _targetV.y += Math.sin(t * 0.08) * 0.4;
+    } else if (drillLevel === 'stand' || drillLevel === 'block') {
+      if (aspect < 1.1) {
+        const portraitScale = Math.min(1.4, 1.1 / Math.max(0.48, aspect));
+        _targetV.x = targetLookAt[0] + (targetPos[0] - targetLookAt[0]) * portraitScale;
+        _targetV.y = targetLookAt[1] + (targetPos[1] - targetLookAt[1]) * portraitScale;
+        _targetV.z = targetLookAt[2] + (targetPos[2] - targetLookAt[2]) * portraitScale;
+      }
+    }
+
+    if (instant) {
     }
 
     // Smooth eased lerp (approx 1.2s transition)

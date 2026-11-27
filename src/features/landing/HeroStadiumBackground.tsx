@@ -79,14 +79,14 @@ export const HeroStadiumBackground: React.FC = () => {
       <img
         src="/landing/hero-poster.jpg"
         alt="TU Cricket Ground night preview"
-        className="w-full h-full object-cover object-[68%_center] absolute inset-0"
+        className="w-full h-full object-cover object-center lg:object-[68%_center] absolute inset-0"
         loading="eager"
       />
 
       {/* Live 3D Scene: mounts only after idle FPS probe >= 40 fps, cross-fades smoothly */}
       {shouldLoad3D && (
         <div
-          className={`hero-stadium-canvas-wrap w-full h-full lg:translate-x-[10%] scale-[1.02] absolute inset-0 transition-opacity duration-700 ease-out ${
+          className={`hero-stadium-canvas-wrap absolute inset-0 transition-opacity duration-700 ease-out w-full lg:w-[120%] h-full left-0 lg:-left-[5%] translate-x-0 lg:translate-x-[8%] ${
             is3DReady ? 'opacity-100' : 'opacity-0'
           }`}
         >
@@ -104,10 +104,20 @@ export const HeroStadiumBackground: React.FC = () => {
         </div>
       )}
 
-      {/* Left-to-right dark gradient: crisp text readability without dimming the stadium */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        background: 'linear-gradient(to right, #0a0b10 0%, rgba(10,11,16,0.92) 22%, rgba(10,11,16,0.55) 38%, rgba(10,11,16,0.12) 52%, transparent 62%)'
-      }} />
+      {/* Mobile top-to-bottom dark gradient: ensures headline and buttons are completely readable on phones */}
+      <div
+        className="absolute inset-0 pointer-events-none block lg:hidden"
+        style={{
+          background: 'linear-gradient(to bottom, rgba(10,11,16,0.92) 0%, rgba(10,11,16,0.82) 42%, rgba(10,11,16,0.35) 75%, rgba(10,11,16,0.9) 100%)'
+        }}
+      />
+      {/* Desktop left-to-right dark gradient: crisp text readability without dimming the stadium */}
+      <div
+        className="absolute inset-0 pointer-events-none hidden lg:block"
+        style={{
+          background: 'linear-gradient(to right, #0a0b10 0%, rgba(10,11,16,0.92) 22%, rgba(10,11,16,0.55) 38%, rgba(10,11,16,0.12) 52%, transparent 62%)'
+        }}
+      />
       {/* Subtle bottom fade to transition seamlessly into the content */}
       <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-[#0a0b10] via-[#0a0b10]/60 to-transparent pointer-events-none" />
       {/* Top vignette for header readability */}
